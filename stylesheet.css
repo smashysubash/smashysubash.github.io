@@ -41,10 +41,10 @@ i.aa2{
 h1{
     color: rgb(243, 239, 239);
 }
-h2{
+h2, h2>a{
     color: rgb(195, 235, 16);
 }
-a{
+h3>a,a{
     color:black;
 }
 img{
