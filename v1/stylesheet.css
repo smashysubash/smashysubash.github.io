@@ -1,0 +1,74 @@
+body{
+    background: linear-gradient( 90deg , #0099FF 0%, #6610f2 100%);
+    padding: 5% 10% 5% 10%;
+    word-wrap: break-word;
+    font-family: 'Akaya Kanadaka', cursive;
+}
+.top-box{
+    display: grid;
+    grid-template-columns: 270px auto ;
+    grid-template-rows: auto auto;
+    border: solid whitesmoke 1px ;
+    border-radius: 0% 15% 0% 15%;
+    background: white;
+    margin-right: 10%;
+    max-width: 900px;
+}
+.box-model{
+    padding: 10px 10px 10px 10px;
+    margin: 5px 5px 5px 5px;
+}
+.box-model:hover{
+    background: rgb(255, 255, 255, 0.2) ;
+    border-left: solid 5px white;
+    
+}
+.aa2{
+    font-size: 125%;
+    text-align: center;
+    align-self: center;
+    background: linear-gradient( 90deg , #0099FF 0%, #6610f2 100%);
+    -webkit-text-fill-color: transparent;
+    -webkit-background-clip: text;
+}
+i.aa2{
+    position: sticky;
+}
+.bi{
+    font-size: larger;
+    margin: 1.5% 1.5% 1.5% 1.5%;
+}
+h1{
+    color: rgb(243, 239, 239);
+}
+h2, h2>a{
+    color: rgb(195, 235, 16);
+}
+h3>a,a{
+    color:black;
+}
+img{
+    padding: 5% 5% 5% 5%;
+    border-radius: 5% 25% 5% 25%;
+}
+.rhtpd{
+    padding-left: 5%;
+}
+@media only screen and (max-width: 680px) {
+    body {
+      padding: 0% 0% 0% 0%;
+    }
+    .top-box{
+        margin-right: 1%;
+    }
+}
+@media only screen and (max-width: 490px){
+    body{
+        padding: 0% 0% 0% 0%;
+    }
+    .top-box{
+        margin-right: 1%;
+        grid-template-columns: auto;
+        justify-content: center;
+    }
+}

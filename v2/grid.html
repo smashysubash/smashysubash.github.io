@@ -1,0 +1,39 @@
+<html>
+<head>
+<style>
+.grid
+{
+display:grid;
+padding:50px;
+grid-template-columns:auto auto;
+}
+.item
+{
+background-color:aqua;
+padding:20px;
+border:1px solid black;
+}
+.item1{
+grid-column-start: 1;
+grid-column-end: 3;
+}
+.item5{
+grid-column-start: 1;
+grid-column-end: 3;
+}
+.item2{
+grid-row-start: 2;
+grid-row-end: 4;
+}
+</style>
+</head>
+<body>
+<div class="grid">
+<div class="item1 item">Header</div>
+<div class="item item2">divison1</div>
+<div class="item">division2</div>
+<div class="item">division2</div>
+<div class="item item5">Footer</div>
+</div>
+</body>
+</html>

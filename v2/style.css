@@ -1,0 +1,197 @@
+body{
+  background: black;
+  color: white;
+}
+
+.links img{
+  width:6vw;
+  margin: 10px;
+  border-radius: 40px;
+}
+.links{
+display:flex;
+flex-direction: column;
+position: fixed;
+right: 0;
+top: 25vh;
+
+}
+
+.front{
+  display: flex;
+  align-items: center;
+margin: -20px 0px 0px -10px;
+}
+
+.second{
+  padding-top: 10vh;
+}
+
+.page{
+min-height:95vh;
+width: 98.5vw;
+}
+.educard{
+  border: inset 3px ;
+  margin: 5vh 20vw 5vh 20vw;
+  padding: 5vh 5vw 0vh 5vw;
+  height: 120px;
+}
+
+@-webkit-keyframes typing { from { width: 0; } }
+@-webkit-keyframes blink-caret { 50% { border-color: transparent; } }
+
+.typed-out { 
+	font: bold 8vw Consolas, Monaco, monospace;
+	border-right: .1em solid purple;
+	width: 8ch;
+	margin: 2em 1em;
+	white-space: nowrap;
+	overflow: hidden;
+	-webkit-animation: typing 5s steps(8, end), blink-caret .5s step-end infinite alternate;
+}
+
+#navbar{
+  display: flex;
+  justify-content: space-evenly;
+  position: sticky;
+  top:0;
+  /* background-color: black; */
+  z-index: 2;
+  background-color: purple;
+  margin-top: -8px;
+  margin-left: -8px;
+  width: 100vw;
+}
+
+#navbar a{
+  color: white;
+  text-decoration: none;
+  height: 5vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: -webkit-fill-available;
+}
+
+#navbar a:hover{
+  background-color: darkgrey;
+  color: black;
+}
+
+.educard img{
+  float:left;
+}
+.scholar-img{
+  margin-top: 20px;
+  margin-right: 10px;
+}
+
+.badge-img{
+  position: absolute;
+  top: 113vh;
+  left: 71vw;
+  background: none;
+}
+.badge-img2{
+  position: absolute;
+  top: 145vh;
+  left: 71vw;
+  background: none;
+}
+.badge-txt2{
+  max-width: fit-content;
+  color: blue;
+  font-weight: bolder;
+  position: absolute;
+  top: 117vh;
+  left: 74vw;
+  background: none;
+}
+.badge-txt{
+  color: blue;
+  font-weight: bolder;
+  position: absolute;
+  top: 150vh;
+  left: 74vw;
+  max-width: fit-content;
+  background: none;
+}
+img{
+  
+  background-color: black;
+}
+.edutolltip{
+  display: inline;
+  position: absolute;
+  top: 107vh;
+  left: 25vw;
+  background-color: black;
+  font-size: 25px;
+}
+.edutolltip2{
+  display: inline;
+  position: absolute;
+  top: 137vh;
+  left: 25vw;
+  background-color: black;
+  font-size: 25px;
+}
+
+#project{
+  display: flex;
+  justify-content: space-evenly;
+  flex-wrap: wrap;
+  padding-top: 10vh;
+}
+
+.project-card{
+  background-color: white;
+  color: black;
+  height: min-content;
+  width: 350px;
+  margin-left: 5vw;
+  margin-top: 5vh;
+}
+
+.project-card a{
+  text-decoration: none;
+  text-align: center;
+  color: black;
+  font-size: 20px;
+}
+
+#skill img{
+  background-color: white;
+}
+
+#skill{
+  margin-top: 10vh;
+  
+  display: flex;
+  flex-direction: column;
+  justify-content: space-evenly;
+}
+.skill-box{
+  margin-left: 10vw;
+}
+.skill-box p{
+  padding-left: 5vw;
+}
+.skill-box a{
+  margin-left: 10px;
+}
+.skill-box h1{
+  max-width: fit-content;
+  border-bottom: 2px solid white;
+}
+#footer{
+  width: 100vw;
+  text-align: center;
+  background-color: purple;
+  margin-left: -8px;
+  margin-bottom: -8px;
+  height: 5vh;
+  color: white;
+  font-size: larger;
+}
