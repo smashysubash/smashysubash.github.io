@@ -1,0 +1,24 @@
+---
+title: Traceability platform backend
+summary: Multi-org, multi-user auth. Dynamic provenance creation. DIY setup flows so clients onboard themselves.
+section: platform
+order: 2
+stack: [Node.js, MongoDB, BullMQ, GS1]
+---
+
+## What it does
+
+The backend behind product traceability for enterprise and mid-market consumer-product brands. Products, batches and serialized units go through it, along with the authentication checks consumers run.
+
+## What I built
+
+- Multi-org, multi-user authentication.
+- Dynamic provenance creation.
+- DIY setup flows, so clients can onboard themselves.
+- GS1 serialization and NFC-based product authentication APIs.
+- BullMQ pipelines for scheduled reports, batch jobs, and email and SMS delivery, with retries.
+- SAP integration APIs.
+
+## Performance
+
+Dashboard queries got 30% faster after I restructured the MongoDB aggregation pipelines: `$match` moved before `$lookup`, plus compound indexes on the high-volume queries.

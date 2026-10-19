@@ -1,0 +1,87 @@
+---
+import '../styles/global.css';
+import { profile } from '../data/site';
+import { url } from '../lib/url';
+
+interface Props {
+  title?: string;
+  description?: string;
+  /** Home page nav links to sections; inner pages link back home. */
+  home?: boolean;
+}
+
+const { title, description = profile.tagline, home = false } = Astro.props;
+const pageTitle = title ? `${title} · ${profile.name}` : `${profile.name} · ${profile.headline}`;
+const canonical = new URL(Astro.url.pathname, Astro.site);
+const nav = [
+  ['Experience', 'experience'],
+  ['Platform', 'platform'],
+  ['AI', 'ai'],
+  ['Skills', 'skills'],
+  ['Writing', 'writing'],
+  ['Contact', 'contact'],
+];
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>{pageTitle}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <link rel="icon" type="image/svg+xml" href={url('favicon.svg')} />
+    <meta property="og:title" content={pageTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={canonical} />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,400..900&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+    />
+    <script is:inline>
+      try {
+        const t = localStorage.getItem('ss-theme');
+        if (t) document.documentElement.dataset.theme = t;
+      } catch {}
+    </script>
+  </head>
+  <body>
+    <header class="gutter fixed inset-x-0 z-20" style="top: env(safe-area-inset-top, 0px); background: linear-gradient(var(--bg), transparent)">
+      <div class="mx-auto flex h-[60px] max-w-[1280px] items-center gap-4">
+        <a class="font-display text-[17px] font-extrabold no-underline" style="font-stretch: 118%" href={home ? '#intro' : url('/')}>{profile.name}</a>
+        <nav aria-label="Sections" class="ml-auto hidden gap-4 min-[861px]:flex">
+          {nav.map(([label, id]) => (
+            <a class="font-mono text-[12.5px] text-muted no-underline hover:text-ink" href={home ? `#${id}` : url(`/#${id}`)}>{label}</a>
+          ))}
+        </nav>
+        <button
+          id="theme"
+          type="button"
+          aria-label="Switch colour theme"
+          class="ml-auto h-8 cursor-pointer rounded-full border border-line bg-panel px-3 font-mono text-xs text-ink min-[861px]:ml-0"
+        >Theme</button>
+      </div>
+    </header>
+    <slot />
+    <script>
+      const root = document.documentElement;
+      const btn = document.getElementById('theme')!;
+      const mq = matchMedia('(prefers-color-scheme: dark)');
+      const current = () => root.dataset.theme ?? (mq.matches ? 'dark' : 'light');
+      const label = () => { btn.textContent = current() === 'dark' ? 'Light' : 'Dark'; };
+      btn.addEventListener('click', () => {
+        const next = current() === 'dark' ? 'light' : 'dark';
+        root.dataset.theme = next;
+        try { localStorage.setItem('ss-theme', next); } catch {}
+        label();
+        document.dispatchEvent(new Event('themechange'));
+      });
+      mq.addEventListener('change', label);
+      label();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,24 @@
+---
+import { getCollection, render } from 'astro:content';
+import Article from '../../layouts/Article.astro';
+
+export async function getStaticPaths() {
+  const projects = await getCollection('projects', (p) => p.data.caseStudy);
+  return projects.map((project) => ({ params: { id: project.id }, props: { project } }));
+}
+
+const { project } = Astro.props;
+const { Content } = await render(project);
+const d = project.data;
+---
+
+<Article
+  title={d.title}
+  description={d.summary}
+  eyebrow={d.section === 'ai' ? 'AI, shipped' : 'Platform & infra'}
+  badge={d.badge}
+  stack={d.stack}
+  back={{ href: `/#${d.section}`, label: 'Back to the work' }}
+>
+  <Content />
+</Article>

@@ -1,0 +1,30 @@
+---
+title: Agentic data assistant
+summary: Plain-English questions over scan and product data, answered as chart pages. MCP tool server, whitelisted collections, org id in every query, PII masked before the model sees a row. Works with any OpenAI-compatible model.
+section: ai
+badge: MVP
+order: 2
+stack: [MCP, TypeScript]
+---
+
+## What it does
+
+A team member asks a question in plain English. The agent decides what data it needs, runs the queries, looks at the results, queries again if it needs to, and answers with a self-contained page of charts, a short summary and a table.
+
+## How it's built
+
+- A separate Node.js + TypeScript service, never exposed to the internet. Requests come through the core app, which has already checked the user's token.
+- An MCP tool server and client in the same process. The model calls tools in a loop until it has enough data.
+- Answers are built from a fixed set of page blocks, so every report looks consistent.
+- Follow-up questions work within a 30-minute session.
+
+## Guardrails
+
+- Only whitelisted collections can be queried.
+- The org id is injected into every query, so the model can't reach another org's data.
+- PII is masked before any row reaches the model.
+- Row limits, and dangerous query operators blocked.
+
+## Any model
+
+The service talks to any OpenAI-compatible provider. Switching models means changing environment variables, not code.

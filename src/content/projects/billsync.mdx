@@ -1,0 +1,28 @@
+---
+title: BillSync
+summary: Vendor PDF invoices into Zoho Books bills. pdfplumber first, PaddleOCR for scans. rapidfuzz matching that learns mappings. Flags price and MRP changes. A human confirms before anything posts.
+section: ai
+badge: Side project
+badgeStyle: kind
+order: 7
+stack: [FastAPI, React, MongoDB, Docker, Zoho OAuth2]
+---
+
+## The problem
+
+Vendor invoices arrive as PDFs. Someone has to type every line item into Zoho Books as a purchase bill.
+
+## How it works
+
+1. **Extract.** pdfplumber reads text-based PDFs. Scanned ones go to PaddleOCR instead.
+2. **Match.** rapidfuzz suggests the matching Zoho item for each vendor product. Confirmed matches are saved, so the next invoice matches on its own.
+3. **Check.** Prices and MRP are compared with history, and changes are flagged.
+4. **Confirm.** A person reviews everything in a React UI before a bill is created.
+
+## Design
+
+- Zoho Books stays the source of truth, connected over OAuth2.
+- MongoDB only caches mappings and price history.
+- Runs with Docker Compose.
+
+Built with FastAPI, React, MongoDB and Docker.

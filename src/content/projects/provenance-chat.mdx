@@ -1,0 +1,29 @@
+---
+title: Consumer provenance chat
+summary: A shopper photographs a product's back label and asks where it came from. The answer comes from real supply-chain records, not the model's imagination.
+section: ai
+badge: MVP
+featured: true
+order: 1
+points:
+  - Photo to OCR to batch match to a grounded LLM answer.
+  - Failover across 4 models, so one provider going down never breaks the chat.
+  - Context held on the client. A follow-up costs 1 LLM call and 0 backend calls.
+stack: [LLM, OCR, Node.js, MongoDB]
+---
+
+## The idea
+
+Shoppers want to know where a product came from. The traceability data already exists, so the chat's job is to find the right records and explain them in plain language without inventing anything.
+
+## How it works
+
+1. The shopper takes a photo of the back label.
+2. OCR pulls the identifying details off the label.
+3. The backend resolves the supply-chain batch those details belong to.
+4. An LLM narrates the answer, grounded only in that batch's records.
+
+## Decisions
+
+- **Failover across 4 models.** If one provider is slow or down, the next one answers. The chat never depends on a single vendor.
+- **Context on the client.** After the first answer, the conversation context lives in the browser. A follow-up question costs 1 LLM call and 0 backend calls.

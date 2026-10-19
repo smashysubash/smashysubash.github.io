@@ -1,0 +1,198 @@
+---
+import { getCollection } from 'astro:content';
+import Base from '../layouts/Base.astro';
+import Feature from '../components/Feature.astro';
+import ProjectCard from '../components/ProjectCard.astro';
+import { profile, impact, experience, skills, certifications, portrait } from '../data/site';
+import { url } from '../lib/url';
+
+const projects = (await getCollection('projects')).sort((a, b) => a.data.order - b.data.order);
+const bySection = (s: 'platform' | 'ai') => projects.filter((p) => p.data.section === s);
+const platform = bySection('platform');
+const ai = bySection('ai');
+const posts = (await getCollection('blog')).sort((a, b) => (b.data.pubDate?.getTime() ?? 0) - (a.data.pubDate?.getTime() ?? 0));
+
+/** Section order drives the lattice: one shape per stop. */
+const stops = [
+  { id: 'intro', name: 'Intro' },
+  { id: 'impact', name: 'Impact' },
+  { id: 'experience', name: 'Experience' },
+  { id: 'platform', name: 'Platform' },
+  { id: 'ai', name: 'AI' },
+  { id: 'skills', name: 'Skills' },
+  { id: 'certs', name: 'Certs' },
+  { id: 'writing', name: 'Writing' },
+  { id: 'contact', name: 'Contact' },
+];
+const portraitCfg = JSON.stringify({ ...portrait, src: url(portrait.src) });
+---
+
+<Base home>
+  <canvas id="lattice" class="fixed inset-0 z-0 block h-full w-full" aria-hidden="true" data-portrait={portraitCfg}></canvas>
+
+  <nav id="hud" aria-label="Sections" class="fixed top-1/2 z-15 hidden -translate-y-1/2 flex-col items-end gap-2 font-mono text-[11px] tracking-[.06em] uppercase min-[1101px]:flex" style="right: max(16px, env(safe-area-inset-right, 0px))">
+    {stops.map((s) => <a href={`#${s.id}`}><i></i><span>{s.name}</span></a>)}
+  </nav>
+
+  <main class="gutter relative z-[2]">
+    <section class="stop hero" id="intro" data-shape="portrait">
+      <div class="panel">
+        <span class="inline-flex items-center gap-2 font-mono text-[13px] text-ok"><i class="inline-block size-2 rounded-full bg-ok"></i>{profile.status} · {profile.location}</span>
+        <h1 class="hero-title">{profile.name}<span>{profile.headline}</span></h1>
+        <p class="max-w-[38ch] text-[clamp(17px,1.6vw,20px)]">{profile.tagline}</p>
+        <div class="flex flex-wrap gap-2.5">
+          <a class="btn primary" href="#impact">See the work</a>
+          <a class="btn" href={url(profile.resume)} target="_blank" rel="noopener">Resume (PDF)</a>
+          <a class="btn" href="#contact">Get in touch</a>
+        </div>
+        <div class="flex flex-wrap gap-[18px] font-mono text-[13px] text-muted">
+          <a class="no-underline hover:text-accent" href={profile.github} target="_blank" rel="noopener">GitHub ↗</a>
+          <a class="no-underline hover:text-accent" href={profile.linkedin} target="_blank" rel="noopener">LinkedIn ↗</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="stop right" id="impact" data-shape="fleet">
+      <div class="panel">
+        <span class="eyebrow"><b>01</b> Impact</span>
+        <h2 class="h2">Numbers from production.</h2>
+        <div class="grid grid-cols-1 gap-px overflow-hidden rounded-[10px] border border-line bg-line min-[561px]:grid-cols-2">
+          {impact.map((s) => (
+            <div class="flex min-w-0 flex-col gap-1 bg-panel p-4">
+              <div class="font-display text-[40px] leading-none font-black tracking-[-.03em] tabular-nums" style="font-stretch: 120%">{s.value}<small class="ml-0.5 text-[.5em] text-accent">{s.unit}</small></div>
+              <div class="text-[15px] font-semibold">{s.what}</div>
+              <div class="text-[13px] leading-[1.45] text-muted">{s.how}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <section class="stop" id="experience" data-shape="ladder">
+      <div class="panel wide">
+        <span class="eyebrow"><b>02</b> Experience</span>
+        <h2 class="h2">{experience.company}</h2>
+        <div class="flex flex-wrap items-center gap-1.5 font-mono text-[12.5px]">
+          {experience.ladder.map((r, i) => (
+            <>
+              {i > 0 && <span class="text-muted">→</span>}
+              <span class:list={['rounded border bg-panel px-2 py-1', i === experience.ladder.length - 1 ? 'border-accent text-accent' : 'border-line']}>{r.role} · {r.since}</span>
+            </>
+          ))}
+        </div>
+        <p class="lead">{experience.period}. {experience.intro}</p>
+        <div class="grid grid-cols-1 gap-x-[22px] gap-y-[18px] min-[561px]:grid-cols-2">
+          {experience.groups.map((g) => (
+            <div>
+              <h4 class="mb-2 font-mono text-xs font-semibold tracking-[.06em] text-accent uppercase">{g.title}</h4>
+              <ul class="pts text-sm">{g.points.map((p) => <li>{p}</li>)}</ul>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <section class="stop right" id="platform" data-shape="tenants">
+      <div class="panel wide">
+        <span class="eyebrow"><b>03</b> Platform &amp; infra</span>
+        {platform.filter((p) => p.data.featured).map((p) => <Feature project={p} />)}
+        <div class="grid grid-cols-1 gap-2.5 min-[561px]:grid-cols-2">
+          {platform.filter((p) => !p.data.featured).map((p, i, all) => <ProjectCard project={p} span={all.length % 2 === 1 && i === all.length - 1} />)}
+        </div>
+      </div>
+    </section>
+
+    <section class="stop" id="ai" data-shape="neural">
+      <div class="panel wide">
+        <span class="eyebrow"><b>04</b> AI, shipped</span>
+        {ai.filter((p) => p.data.featured).map((p) => <Feature project={p} />)}
+        <div class="grid grid-cols-1 gap-2.5 min-[561px]:grid-cols-2">
+          {ai.filter((p) => !p.data.featured).map((p, i, all) => <ProjectCard project={p} span={all.length % 2 === 1 && i === all.length - 1} />)}
+        </div>
+      </div>
+    </section>
+
+    <section class="stop right" id="skills" data-shape="clusters" data-sizes={skills.map((g) => g.items.length).join(',')}>
+      <div class="panel">
+        <span class="eyebrow"><b>05</b> Skills</span>
+        <h2 class="h2">The stack</h2>
+        <div class="grid gap-3.5">
+          {skills.map((g) => (
+            <div>
+              <h4 class="mb-2 flex justify-between font-mono text-xs font-semibold tracking-[.06em] text-muted uppercase">{g.title}<span>{g.items.length}</span></h4>
+              <div class="chips">{g.items.map((s) => <span class:list={['chip', s.core && 'core']}>{s.name}</span>)}</div>
+            </div>
+          ))}
+        </div>
+        <span class="font-mono text-xs text-muted">Filled = daily drivers</span>
+      </div>
+    </section>
+
+    <section class="stop" id="certs" data-shape="badge">
+      <div class="panel">
+        <span class="eyebrow"><b>06</b> Certifications</span>
+        <h2 class="h2">Certifications</h2>
+        {certifications.map((c) => (
+          <div class="card"><h3 class="h3">{c.name}</h3><p>{c.issuer}</p></div>
+        ))}
+      </div>
+    </section>
+
+    <section class="stop right" id="writing" data-shape="pages">
+      <div class="panel">
+        <span class="eyebrow"><b>07</b> Writing</span>
+        <h2 class="h2">Notes from production</h2>
+        {posts.map((p) => p.data.draft ? (
+          <div class="card border-dashed"><h3 class="text-[15px] font-semibold">{p.data.title}</h3><p>Draft · {p.data.summary}</p></div>
+        ) : (
+          <a class="card" href={url(`/blog/${p.id}/`)}><h3 class="text-[15px] font-semibold">{p.data.title}</h3><p>{p.data.summary}</p></a>
+        ))}
+        <a class="font-mono text-xs text-accent no-underline hover:underline" href={url('/blog/')}>All writing →</a>
+      </div>
+    </section>
+
+    <section class="stop" id="contact" data-shape="tag">
+      <div class="panel">
+        <span class="eyebrow"><b>08</b> Contact</span>
+        <h2 class="h2">{profile.contactHeadline}</h2>
+        <p class="lead">{profile.contactLead}</p>
+        <div class="c-row"><a href={`mailto:${profile.email}`} id="email">{profile.email}</a><button type="button" id="copy">Copy</button></div>
+        <div class="c-row"><a href={profile.linkedin} target="_blank" rel="noopener">linkedin.com/in/subash07</a><span>↗</span></div>
+        <div class="c-row"><a href={profile.github} target="_blank" rel="noopener">github.com/smashysubash</a><span>↗</span></div>
+        <div class="c-row"><a href={url(profile.resume)} target="_blank" rel="noopener">Resume (PDF)</a><span>↗</span></div>
+        <span class="font-mono text-xs text-muted">{profile.name} · {new Date().getFullYear()}</span>
+      </div>
+    </section>
+  </main>
+</Base>
+
+<style>
+  .hero-title { font-size: clamp(48px, 8vw, 108px); line-height: .88; font-weight: 900; font-stretch: 122%; letter-spacing: -.035em; }
+  .hero-title span { display: block; font-size: .42em; line-height: 1.05; font-weight: 700; font-stretch: 105%; letter-spacing: -.02em; margin-top: .4em; color: var(--accent); }
+  /* Section index on the right edge: only the active label shows; hovering the index reveals all. */
+  #hud a { display: flex; flex-direction: row-reverse; align-items: center; gap: 10px; color: var(--muted); text-decoration: none; opacity: .55; transition: opacity .3s, color .3s; }
+  #hud a span { opacity: 0; transition: opacity .25s; }
+  #hud a i { width: 14px; height: 2px; background: currentColor; transition: width .3s; }
+  #hud a.on { color: var(--warm); opacity: 1; }
+  #hud a.on i { width: 30px; }
+  #hud a.on span, #hud:hover a span, #hud a:focus-visible span { opacity: 1; }
+</style>
+
+<script>
+  // three.js is the heavy part of the page; load it after the content so text paints first.
+  const canvas = document.getElementById('lattice') as HTMLCanvasElement | null;
+  if (canvas) import('../scripts/lattice').then((m) => m.startLattice(canvas));
+
+  const copy = document.getElementById('copy');
+  const email = document.getElementById('email');
+  copy?.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(email?.textContent ?? '');
+      copy.textContent = 'Copied';
+      setTimeout(() => (copy.textContent = 'Copy'), 1600);
+    } catch {
+      if (email) getSelection()?.selectAllChildren(email);
+      copy.textContent = 'Selected';
+    }
+  });
+</script>

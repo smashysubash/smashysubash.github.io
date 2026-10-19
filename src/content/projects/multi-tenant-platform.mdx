@@ -1,0 +1,38 @@
+---
+title: Multi-tenant platform
+summary: Every client used to get its own stack, a core, a login service and a blockchain service. I designed one NestJS service with a database per tenant. 10+ tenants run on it in production.
+section: platform
+badge: Live · 10+ tenants
+featured: true
+order: 1
+points:
+  - Isolated database per tenant, routed at the app layer per request.
+  - One service for REST + GraphQL.
+  - Atomic scan flow. No more orphan records.
+  - Login lockout, race-free counters, idempotent migrations.
+  - Pagination checked at 200k records.
+stack: [NestJS, TypeScript, MongoDB, GraphQL]
+---
+
+## The problem
+
+Each client ran on its own deployment: a core service, a login service and a blockchain service. Every new client meant more infrastructure, more databases and more cost, even for clients who only used a small part of the platform.
+
+## What I built
+
+One NestJS service that serves every tenant. Each tenant keeps its own isolated database, and the app resolves the tenant on every request and routes to the right connection. I chose a database per tenant over a shared schema for clean data separation.
+
+- One app for both REST and GraphQL.
+- The login service folded into the core, and the blockchain service dropped.
+- Legacy data moved with idempotent migration scripts, so a rerun never duplicates anything.
+
+## Fixes along the way
+
+- **Atomic scan flow.** The old flow created a linked record in a second, separate call that sometimes never fired, leaving orphans. Now both records are created in one atomic step.
+- **Login lockout.** Brute-force protection the old system never had.
+- **Race-free counters.** Batch numbers come from an atomic sequence instead of an unindexed counter.
+- **Pagination at scale.** Checked the pagination pipeline at 200k records and added the index it was missing.
+
+## Result
+
+10+ tenants live in production on one service.

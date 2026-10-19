@@ -1,0 +1,29 @@
+---
+title: Agentic supply-chain chat
+summary: Answers come from tenant data, with citations. The model picks a query, the backend injects the tenant and runs it. Tools filtered by role. A 25-question eval gates every release.
+section: ai
+badge: MVP
+order: 3
+stack: [Claude API, Tool use]
+---
+
+## The rule
+
+The model never answers from memory. Every answer starts with a real query against the tenant's data. If the data doesn't have the answer, the chat says so.
+
+## The loop
+
+1. The user asks a question.
+2. The model picks one of a fixed set of query types.
+3. The backend injects the tenant id and runs the query. The model never touches the database.
+4. The model writes the answer from the results, with citations to the exact records.
+
+## Safety
+
+- The tenant is always set server-side. A user can't reach another tenant's data, even by asking.
+- Tools are filtered by role before the model sees them.
+- Per-tenant daily limits keep cost in check.
+
+## Quality gate
+
+A 25-question evaluation suite has to pass before any release. It checks query choice, no facts beyond the data, citations, and graceful "data not available" answers.

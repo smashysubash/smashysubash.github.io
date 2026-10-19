@@ -1,0 +1,14 @@
+---
+import Base from '../layouts/Base.astro';
+import { url } from '../lib/url';
+---
+
+<Base title="Not found">
+  <main class="gutter">
+    <div class="mx-auto flex min-h-screen max-w-[760px] flex-col justify-center gap-4">
+      <span class="eyebrow"><b>404</b> Scan failed</span>
+      <h1 class="font-display text-[clamp(34px,5vw,56px)] leading-[1.02] font-extrabold" style="font-stretch: 115%">This page isn't on the trail.</h1>
+      <a class="btn primary self-start" href={url('/')}>Back home</a>
+    </div>
+  </main>
+</Base>

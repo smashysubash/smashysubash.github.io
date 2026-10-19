@@ -1,0 +1,25 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import { url } from '../lib/url';
+
+interface Props {
+  project: CollectionEntry<'projects'>;
+  span?: boolean;
+}
+
+const { project, span = false } = Astro.props;
+const d = project.data;
+const Tag = d.caseStudy ? 'a' : 'div';
+---
+
+<Tag class:list={['card', span && 'col-span-full']} href={d.caseStudy ? url(`/projects/${project.id}/`) : undefined}>
+  {d.badge && <span class:list={['badge', d.badgeStyle === 'kind' && 'kind']}>{d.badge}</span>}
+  <h3 class="h3">{d.title}</h3>
+  <p>{d.summary}</p>
+  {d.stack.length > 0 && (
+    <div class="chips mt-auto pt-1">
+      {d.stack.map((s) => <span class="chip sm">{s}</span>)}
+    </div>
+  )}
+  {d.caseStudy && <span class="font-mono text-xs text-accent">Read the case study →</span>}
+</Tag>

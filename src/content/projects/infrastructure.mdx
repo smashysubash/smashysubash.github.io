@@ -1,0 +1,25 @@
+---
+title: Infrastructure ownership
+summary: Started and owned all company infra on AWS, Azure and DigitalOcean. Beszel first for visibility, then a full audit, 35% off the monthly bill. Led Azure to AWS. Wazuh, on-call.
+section: platform
+order: 3
+stack: [AWS, Docker, Nginx, GitHub Actions]
+---
+
+## The 35% cut
+
+Infrastructure had spread across AWS, Azure and DigitalOcean with no single view of it. Nobody asked me to fix that. I set up Beszel for monitoring across all three providers first, then audited every resource against what it actually used. The monthly cloud bill dropped 35%.
+
+## Azure to AWS
+
+I led the migration: audited service dependencies, sequenced the cutover, and consolidated onto one deployment stack.
+
+## Running it
+
+- DNS, SSL/TLS, networking rules and CI/CD on all three clouds.
+- Wazuh for security monitoring: log aggregation, threat detection and alerts.
+- On-call for production.
+
+## The Redis outage
+
+A cascading production failure traced back to a downed Redis instance. Every dependent service was back within an hour, with no data lost, and I wrote up the root cause and how to prevent it.
