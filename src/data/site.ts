@@ -120,9 +120,9 @@ export const certifications = [
  */
 export const services = {
   /** Umami Cloud → Settings → Websites → your site → Website ID. */
-  umamiWebsiteId: '',
+  umamiWebsiteId: '7e6ced83-f433-4d2d-b13f-7d75b43a08a5',
   /** Web3Forms access key (sent to smashysubash@gmail.com). Empty = no form, email only. */
-  web3formsKey: '',
+  web3formsKey: '0de45661-aa41-42b7-8025-2df77da068e6',
 };
 
 /** Recruiter TL;DR: the 10-second version. Only confirmed facts. */
