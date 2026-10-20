@@ -3,3 +3,49 @@ title: How I cut our cloud bill 35% without anyone asking
 summary: Visibility first with Beszel, then a resource-by-resource audit across 3 clouds.
 draft: true
 ---
+
+Our infrastructure had grown across three providers: AWS, Azure and DigitalOcean. Each new client, service and experiment added a machine somewhere. Nobody had a single view of all of it, and nobody had asked me to look.
+
+I looked anyway. The monthly bill is now 35% lower.
+
+## Step 1: see everything before touching anything
+
+You can't right-size what you can't see. Each provider has its own console and its own metrics, and none of them show the others.
+
+So the first thing I did was deploy Beszel, a lightweight monitoring agent, on every machine across all three clouds. For the first time we had one dashboard with memory, disk and CPU for the whole fleet.
+
+That view changed the conversation. We could finally see which machines cost money and what each one actually used.
+
+## Step 2: decide what "too big" means
+
+Most of our machines were burstable instances. On those, CPU is a misleading signal: it spikes, it idles, and the credits smooth it out. So I set CPU aside and made decisions on the two things that actually run out:
+
+- **Memory.** A machine sitting below 40% memory use was a candidate to shrink.
+- **Disk.** A disk close to full is an outage waiting to happen, whatever the bill says.
+
+I also set one rule to keep risk low: **only halve, never jump.** 8 GB could go to 4 GB, and 4 GB to 2 GB, but nothing dropped two sizes at once. If a service needs more after a change, the step back is small and obvious.
+
+{/* TODO(Subash): how long did you watch usage before deciding (a week? a month?) */}
+
+## Step 3: the audit
+
+With the data in one place, I went through every resource, one by one, against what it actually used.
+
+The result split into three groups:
+
+1. **Downsize.** Machines that had been sized for a load that never came. These were the savings.
+2. **Upsize.** A few machines were running at around 90% memory, one traffic spike from falling over. The goal was always matching size to need, and sometimes that means more.
+3. **Fix the disks.** Some machines were above 90% disk. They got a clean-up and more space before they became an incident.
+
+## The result
+
+The monthly cloud bill dropped 35%. The machines we grew are more stable, and the near-full disks are no longer a risk.
+
+{/* TODO(Subash): anything that surprised you, or a mistake you'd avoid next time */}
+
+## What I'd tell anyone doing this
+
+- **Visibility first.** One dashboard across every provider did more than any single change.
+- **Use the right signal.** On burstable instances, memory and disk tell you more than CPU.
+- **Small, reversible steps.** Halving is easy to undo. Big jumps are not.
+- **Right-size in both directions.** Some machines need more, and finding them is part of the job.

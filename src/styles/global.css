@@ -7,9 +7,9 @@
 
 :root {
   --bg: #EEF1F6; --panel: rgba(255,255,255,.84); --panel-solid: #FFFFFF; --ink: #0E1726; --muted: #536175; --line: #CDD5E0;
-  --accent: #2346D8; --ok: #0A8C72; --warm: #B86E00; --pt-a: #2346D8; --pt-o: #0A8C72; --pt-w: #D98A00;
-  --display: "Archivo", "Arial Narrow", system-ui, sans-serif;
-  --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --accent: #2346D8; --ok: #0A8C72; --warm: #955900; --pt-a: #2346D8; --pt-o: #0A8C72; --pt-w: #D98A00;
+  --display: "Archivo Variable", "Archivo", "Arial Narrow", system-ui, sans-serif;
+  --body: "IBM Plex Sans Variable", "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
 }
 @media (prefers-color-scheme: dark) {

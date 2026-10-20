@@ -3,3 +3,44 @@ title: Redis went down. Everything was back in under an hour.
 summary: Tracing a cascading failure, restoring with no data loss, and the write-up after.
 draft: true
 ---
+
+{/* TODO(Subash): this post needs your details. Fill the TODOs, or tell me and I'll write them in. */}
+
+Production started failing in more than one place at once. Different services, different errors. That pattern usually means the problem isn't in any of them.
+
+## Why one Redis can take down many services
+
+In our platform, Redis sits underneath a lot of things:
+
+- **BullMQ queues.** Scheduled reports, batch jobs, and email and SMS notifications all run as jobs in Redis.
+- **Cache.** Hot reads are served from Redis instead of the database.
+
+When Redis goes, everything that touches it fails too. The services look broken, but they're really waiting on the same dependency. That's what makes it a cascading failure.
+
+{/* TODO(Subash): what did you see first? Alerts, a client report, failed jobs? */}
+
+## Tracing it
+
+The trick was to stop looking at each failing service and look for what they had in common.
+
+{/* TODO(Subash): how you narrowed it to Redis (Beszel, logs, a connection error?) and why the instance went down */}
+
+Every failing path led back to one place: the Redis instance was down.
+
+## Restoring it
+
+I provisioned a replacement Redis instance and brought the dependent services back onto it. Everything was restored within the hour, and no data was lost.
+
+{/* TODO(Subash): how you made sure no data was lost, for example jobs retried, nothing in the queue dropped */}
+
+## The write-up
+
+Restoring service was half the job. Afterwards I wrote up the root cause and what we'd change so it doesn't happen again.
+
+{/* TODO(Subash): the prevention measures from your write-up */}
+
+## What I took from it
+
+- **Many failures at once usually means one cause.** Look for the shared dependency.
+- **Know what sits on Redis.** Queues and cache are easy to forget about until they stop.
+- **Restore first, then write it down.** The write-up is where the lasting fix comes from.

@@ -11,7 +11,7 @@ const posts = (await getCollection('blog')).sort((a, b) => (b.data.pubDate?.getT
     <div class="mx-auto flex max-w-[760px] flex-col gap-4 pt-[120px] pb-24">
       <a class="font-mono text-xs text-muted no-underline hover:text-accent" href={url('/#writing')}>← Back home</a>
       <h1 class="font-display text-[clamp(34px,5vw,56px)] leading-[1.02] font-extrabold tracking-[-.025em]" style="font-stretch: 115%">Notes from production</h1>
-      {posts.map((p) => p.data.draft ? (
+      {posts.map((p) => p.data.draft && !import.meta.env.DEV ? (
         <div class="card border-dashed"><h2 class="h3">{p.data.title}</h2><p>Draft · {p.data.summary}</p></div>
       ) : (
         <a class="card" href={url(`/blog/${p.id}/`)}><h2 class="h3">{p.data.title}</h2><p>{p.data.summary}</p></a>

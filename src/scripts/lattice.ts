@@ -134,9 +134,13 @@ function shapeFor(el: HTMLElement, n: number, sphere: S.Shape): S.Shape {
 export function startLattice(canvas: HTMLCanvasElement) {
   const root = document.documentElement;
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const small = innerWidth < 900 || (navigator.hardwareConcurrency ?? 8) <= 4;
+  /* device tiers: low-end (Save-Data, ≤4 GB memory or ≤2 cores) gets a light lattice with no bloom */
+  const nav = navigator as Navigator & { deviceMemory?: number; connection?: { saveData?: boolean } };
+  const cores = nav.hardwareConcurrency ?? 8;
+  const lowEnd = !!nav.connection?.saveData || (nav.deviceMemory ?? 8) <= 4 || cores <= 2;
+  const small = lowEnd || innerWidth < 900 || cores <= 4;
   // fewer, larger, softer dots: calmer than a dense cloud
-  const N = reduce || small ? 4500 : 7000;
+  const N = lowEnd ? 2500 : reduce || small ? 4500 : 7000;
   const secs = [...document.querySelectorAll<HTMLElement>('[data-shape]')];
   const hud = document.getElementById('hud');
   if (!secs.length) return;
@@ -148,20 +152,23 @@ export function startLattice(canvas: HTMLCanvasElement) {
     canvas.remove();
     return;
   }
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const dpr = Math.min(window.devicePixelRatio || 1, lowEnd ? 1.25 : 2);
   renderer.setPixelRatio(dpr);
   const scene = new Scene();
   const cam = new PerspectiveCamera(42, 1, 0.1, 200);
   cam.position.set(0, 0, 30);
 
   const sphere = S.sphere(N);
-  const shapes = secs.map((el) => shapeFor(el, N, sphere));
+  // shapes are built the first time they're needed, not all up front, to keep start-up light
+  const cache: S.Shape[] = [];
+  const shapeAt = (i: number) => (cache[i] ??= shapeFor(secs[i], N, sphere));
+  const lastIdx = secs.length - 1;
   const sides = secs.map((el) => (el.classList.contains('right') ? 1 : -1));
   const flat = secs.map((el) => FLAT.has(el.dataset.shape ?? ''));
   const gridIdx = secs.findIndex((el) => el.dataset.shape === 'dots');
 
   /* per-point attributes */
-  const from = new Float32Array(shapes[0]), to = new Float32Array(shapes[Math.min(1, shapes.length - 1)]);
+  const from = new Float32Array(shapeAt(0)), to = new Float32Array(shapeAt(Math.min(1, lastIdx)));
   const delay = new Float32Array(N), kind = new Float32Array(N), rand = new Float32Array(N);
   for (let i = 0; i < N; i++) {
     delay[i] = Math.random() * 0.35;
@@ -315,6 +322,7 @@ export function startLattice(canvas: HTMLCanvasElement) {
   new ResizeObserver(measure).observe(document.body);
   resize();
 
+  let frameCount = 0;
   let s = raw(), prevRaw = s, vel = 0, rx = 0, ry = 0, last = -1, seg = -1, running = true;
   const t0 = performance.now();
   let prevNow = t0;
@@ -345,12 +353,12 @@ export function startLattice(canvas: HTMLCanvasElement) {
       [...hud.children].forEach((el, i) => el.classList.toggle('on', i === active));
     }
 
-    const i0 = Math.min(Math.floor(s), shapes.length - 2), f = clamp01(s - i0);
+    const i0 = Math.max(0, Math.min(Math.floor(s), lastIdx - 1)), f = clamp01(s - i0);
 
     if (i0 !== seg) {
       seg = i0;
-      from.set(shapes[i0]);
-      to.set(shapes[Math.min(i0 + 1, shapes.length - 1)]);
+      from.set(shapeAt(i0));
+      to.set(shapeAt(Math.min(i0 + 1, lastIdx)));
       aFrom.needsUpdate = true;
       aTo.needsUpdate = true;
     }
@@ -376,6 +384,8 @@ export function startLattice(canvas: HTMLCanvasElement) {
 
     if (composer && dark) composer.render();
     else renderer.render(scene, cam);
+    // tools/smoke.ts reads this to confirm the lattice is drawing
+    if (frameCount < 3) canvas.dataset.frames = String(++frameCount);
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);

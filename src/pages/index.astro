@@ -97,7 +97,7 @@ const stops = [
         <div class="grid grid-cols-1 gap-x-[22px] gap-y-[18px] min-[561px]:grid-cols-2">
           {experience.groups.map((g) => (
             <div>
-              <h4 class="mb-2 font-mono text-xs font-semibold tracking-[.06em] text-accent uppercase">{g.title}</h4>
+              <h3 class="mb-2 font-mono text-xs font-semibold tracking-[.06em] text-accent uppercase">{g.title}</h3>
               <ul class="pts text-sm">{g.points.map((p) => <li>{p}</li>)}</ul>
             </div>
           ))}
@@ -132,7 +132,7 @@ const stops = [
         <div class="grid gap-3.5">
           {skills.map((g) => (
             <div>
-              <h4 class="mb-2 flex justify-between font-mono text-xs font-semibold tracking-[.06em] text-muted uppercase">{g.title}<span>{g.items.length}</span></h4>
+              <h3 class="mb-2 flex justify-between font-mono text-xs font-semibold tracking-[.06em] text-muted uppercase">{g.title}<span>{g.items.length}</span></h3>
               <div class="chips">{g.items.map((s) => <span class:list={['chip', s.core && 'core']}>{s.name}</span>)}</div>
             </div>
           ))}
@@ -155,7 +155,7 @@ const stops = [
       <div class="panel">
         <span class="eyebrow"><b>07</b> Writing</span>
         <h2 class="h2">Notes from production</h2>
-        {posts.map((p) => p.data.draft ? (
+        {posts.map((p) => p.data.draft && !import.meta.env.DEV ? (
           <div class="card border-dashed"><h3 class="text-[15px] font-semibold">{p.data.title}</h3><p>Draft · {p.data.summary}</p></div>
         ) : (
           <a class="card" href={url(`/blog/${p.id}/`)}><h3 class="text-[15px] font-semibold">{p.data.title}</h3><p>{p.data.summary}</p></a>
@@ -216,7 +216,10 @@ const stops = [
 
   // three.js is the heavy part of the page; load it after the content so text paints first.
   const canvas = document.getElementById('lattice') as HTMLCanvasElement | null;
-  if (canvas) import('../scripts/lattice').then((m) => m.startLattice(canvas));
+  // start after load when the browser is idle, so the text paints and responds first
+  const start = () => import('../scripts/lattice').then((m) => m.startLattice(canvas!));
+  const idle = (cb: () => void) => ('requestIdleCallback' in window ? requestIdleCallback(cb, { timeout: 1500 }) : setTimeout(cb, 300));
+  if (canvas) (document.readyState === 'complete' ? idle(start) : addEventListener('load', () => idle(start), { once: true }));
 
   const copy = document.getElementById('copy');
   const email = document.getElementById('email');

@@ -8,6 +8,8 @@ Astro 7 + Tailwind 4 + MDX, built with Bun, deployed to GitHub Pages (`.github/w
 - `bun --bun run build` · static build to `dist/`
 - `bun --bun x astro check` · type check (needs TypeScript 6; `astro check` does not support TS 7)
 - `bun add -d @imgly/background-removal-node && bun tools/hero-photo.ts <photo> <x0> <y0> <x1> <y1>` · cut the person out (local ML model), tone blue duotone, write `public/hero.webp` + `hero-sm.webp` with transparency; then `bun remove @imgly/background-removal-node` (keep it out of package.json). Current: photo 5 `MyImage-1783447430-00.jpg`, `0.11 0.105 0.995 0.915`
+- `bun tools/smoke.ts` · after a build: page errors, broken links, blank lattice and axe-core a11y (serious/critical fail). CI runs it before every deploy
+- Blog drafts (`draft: true`) get a page in `bun --bun run dev` for review, never in the production build. `TODO(Subash)` comments in a post mark facts only he can fill in
 - `bun tools/shots.ts <dir>` · after a build, screenshot sections, dialogs and a case study in headless Chromium (software WebGL)
 
 ## Where things live

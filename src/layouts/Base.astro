@@ -1,4 +1,9 @@
 ---
+// fonts are self-hosted (no request to Google): Archivo with its width axis, Plex Sans, Plex Mono
+import '@fontsource-variable/archivo/wdth.css';
+import '@fontsource-variable/ibm-plex-sans';
+import '@fontsource/ibm-plex-mono/400.css';
+import '@fontsource/ibm-plex-mono/500.css';
 import '../styles/global.css';
 import 'lenis/dist/lenis.css';
 import CommandMenu from '../components/CommandMenu.astro';
@@ -47,18 +52,14 @@ const nav = [
     <meta property="og:image:height" content="630" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:image" content={ogUrl} />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,400..900&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
-    />
     <script is:inline>
       try {
         const t = localStorage.getItem('ss-theme');
         if (t) document.documentElement.dataset.theme = t;
       } catch {}
     </script>
+    {services.umamiWebsiteId && <link rel="preconnect" href="https://cloud.umami.is" />}
+    {services.umamiWebsiteId && <link rel="preconnect" href="https://gateway.umami.is" />}
     {services.umamiWebsiteId && <script is:inline defer src="https://cloud.umami.is/script.js" data-website-id={services.umamiWebsiteId}></script>}
   </head>
   <body>
@@ -72,8 +73,8 @@ const nav = [
         </nav>
         <div class="ml-auto flex items-center gap-2 min-[961px]:ml-2">
           <button type="button" data-tldr class="pill">TL;DR</button>
-          <button type="button" data-cmdk class="pill" aria-label="Open command menu (Ctrl or Cmd + K)"><kbd>⌘K</kbd></button>
-          <button id="theme" type="button" aria-label="Switch colour theme" class="pill">Theme</button>
+          <button type="button" data-cmdk class="pill" title="Command menu (Ctrl or Cmd + K)"><kbd>⌘K</kbd><span class="sr-only"> command menu</span></button>
+          <button id="theme" type="button" title="Switch colour theme" class="pill">Theme</button>
         </div>
       </div>
     </header>

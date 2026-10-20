@@ -3,7 +3,8 @@ import { getCollection, render } from 'astro:content';
 import Article from '../../layouts/Article.astro';
 
 export async function getStaticPaths() {
-  const posts = await getCollection('blog', (p) => !p.data.draft);
+  // drafts get a page in `astro dev` so they can be reviewed, never in the production build
+  const posts = await getCollection('blog', (p) => !p.data.draft || import.meta.env.DEV);
   return posts.map((post) => ({ params: { id: post.id }, props: { post } }));
 }
 
