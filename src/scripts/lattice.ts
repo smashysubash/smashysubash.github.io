@@ -1,6 +1,7 @@
 /**
  * Living lattice: one point cloud behind the page that morphs into a new shape per section.
- * Sections opt in with `data-shape` (see shapeFor); the hero uses `data-shape="portrait"`.
+ * Sections opt in with `data-shape` (see shapeFor). A section can mark an element with
+ * `data-lattice-anchor` (the hero photo) and the shape centres and sizes itself on it.
  *
  * All per-point motion runs on the GPU. The CPU only uploads the two shapes being blended
  * when the visitor crosses into a new section; easing, cursor push, click ripples,
@@ -17,7 +18,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import * as S from './shapes';
 
 /** Stops where the shape faces the viewer instead of slowly spinning: the avatar and the line-art icons. */
-const FLAT = new Set(['portrait', 'bill', 'career', 'tenants', 'chat']);
+const FLAT = new Set(['halo', 'bill', 'career', 'tenants', 'chat']);
 
 const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 const clamp01 = (v: number) => Math.min(Math.max(v, 0), 1);
@@ -28,7 +29,6 @@ const vertex = /* glsl */ `
   attribute vec3 aTo;
   attribute float aDelay;
   attribute float aKind;
-  attribute float aShade;
   attribute float aRand;
 
   uniform float uProgress;
@@ -41,7 +41,6 @@ const vertex = /* glsl */ `
   uniform vec3 uRipple;
   uniform float uRippleTime;
   uniform float uVelocity;
-  uniform float uPortrait;
   uniform float uMotion;
   uniform vec3 uColA;
   uniform vec3 uColO;
@@ -88,8 +87,7 @@ const vertex = /* glsl */ `
     gl_PointSize = uSize * uPixelRatio * (uScale / depth) * (0.65 + 0.7 * aRand);
 
     vec3 pal = aKind < 0.5 ? uColA : (aKind < 1.5 ? uColO : uColW);
-    vec3 shaded = uColA * (uDark > 0.5 ? (0.45 + 0.75 * aShade) : (1.25 - 0.45 * aShade));
-    vColor = mix(pal, shaded, uPortrait);
+    vColor = pal;
     // depth-of-field feel: points far from the focal plane fade a little
     vAlpha = mix(1.0, 0.45, smoothstep(4.0, 14.0, abs(depth - 30.0))) * (1.0 + push * 0.6);
   }
@@ -110,6 +108,7 @@ const fragment = /* glsl */ `
 
 function shapeFor(el: HTMLElement, n: number, sphere: S.Shape): S.Shape {
   switch (el.dataset.shape) {
+    case 'halo': return S.halo(n);
     case 'bill': return S.cloudBill(n);
     case 'career': return S.careerGraph(n);
     case 'tenants': return S.tenantDbs(n);
@@ -149,11 +148,10 @@ export function startLattice(canvas: HTMLCanvasElement) {
   const shapes = secs.map((el) => shapeFor(el, N, sphere));
   const sides = secs.map((el) => (el.classList.contains('right') ? 1 : -1));
   const flat = secs.map((el) => FLAT.has(el.dataset.shape ?? ''));
-  const heroIdx = secs.findIndex((el) => el.dataset.shape === 'portrait');
 
   /* per-point attributes */
   const from = new Float32Array(shapes[0]), to = new Float32Array(shapes[Math.min(1, shapes.length - 1)]);
-  const delay = new Float32Array(N), kind = new Float32Array(N), shade = new Float32Array(N).fill(0.8), rand = new Float32Array(N);
+  const delay = new Float32Array(N), kind = new Float32Array(N), rand = new Float32Array(N);
   for (let i = 0; i < N; i++) {
     delay[i] = Math.random() * 0.35;
     const q = Math.random();
@@ -161,20 +159,19 @@ export function startLattice(canvas: HTMLCanvasElement) {
     rand[i] = Math.random();
   }
   const geo = new BufferGeometry();
-  const aFrom = new BufferAttribute(from, 3), aTo = new BufferAttribute(to, 3), aShade = new BufferAttribute(shade, 1);
+  const aFrom = new BufferAttribute(from, 3), aTo = new BufferAttribute(to, 3);
   geo.setAttribute('position', aFrom); // three needs a position attribute; the shader reads aFrom/aTo
   geo.setAttribute('aFrom', aFrom);
   geo.setAttribute('aTo', aTo);
   geo.setAttribute('aDelay', new BufferAttribute(delay, 1));
   geo.setAttribute('aKind', new BufferAttribute(kind, 1));
-  geo.setAttribute('aShade', aShade);
   geo.setAttribute('aRand', new BufferAttribute(rand, 1));
 
   const uniforms = {
     uProgress: { value: 0 }, uTime: { value: 0 }, uSize: { value: 0.26 }, uPixelRatio: { value: dpr }, uScale: { value: innerHeight / 2 },
     uMouse: { value: new Vector3(99, 99, 0) }, uMouseStrength: { value: 0 },
     uRipple: { value: new Vector3() }, uRippleTime: { value: -10 },
-    uVelocity: { value: 0 }, uPortrait: { value: 0 }, uMotion: { value: reduce ? 0 : 1 },
+    uVelocity: { value: 0 }, uMotion: { value: reduce ? 0 : 1 },
     uColA: { value: new Color() }, uColO: { value: new Color() }, uColW: { value: new Color() },
     uDark: { value: 1 }, uOpacity: { value: 1 },
   };
@@ -220,37 +217,33 @@ export function startLattice(canvas: HTMLCanvasElement) {
   document.addEventListener('themechange', applyTheme);
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
 
-  /* hero portrait assembles out of the sphere once its points arrive */
-  let heroTarget: S.Shape | null = null, heroBlend = 0;
-  const hero = heroIdx >= 0 ? shapes[heroIdx] : null;
-  if (hero && canvas.dataset.portrait) {
-    S.portrait(N, canvas.dataset.portrait).then((r) => {
-      if (!r) return;
-      heroTarget = r.shape;
-      shade.set(r.shade);
-      aShade.needsUpdate = true;
-    });
-  }
-
   /* Scroll position as a float stop index. Each section holds its shape (an integer) while it
      fills the screen, and the morph to the next shape happens in the band between sections,
      so tall sections never change shape mid-read. */
   let holds: [number, number][] = [];
   /* where each section's shape sits: centred in the free space beside its panel, scaled to fit */
-  let place: { x: number; scale: number }[] = [];
+  let place: { x: number; y: number; scale: number }[] = [];
   const measure = () => {
-    const visW = 2 * Math.tan((cam.fov * Math.PI) / 360) * cam.position.z * cam.aspect;
+    const visH = 2 * Math.tan((cam.fov * Math.PI) / 360) * cam.position.z, visW = visH * cam.aspect;
+    const pxToWorld = visH / innerHeight;
     place = secs.map((s, i) => {
+      /* anchored: centre on the element (the hero photo) and size the shape to frame it */
+      const anchor = s.querySelector<HTMLElement>('[data-lattice-anchor]');
+      if (anchor) {
+        const a = anchor.getBoundingClientRect(), sr = s.getBoundingClientRect();
+        const x = ((a.left + a.width / 2) / innerWidth - 0.5) * visW;
+        const y = -((a.top + a.height / 2) - (sr.top + sr.height / 2)) * pxToWorld;
+        return { x, y, scale: (a.height * pxToWorld * 0.53) / 10 };
+      }
       const panel = s.querySelector<HTMLElement>('.panel');
-      if (!panel || innerWidth <= 900) return { x: 0, scale: 0.9 };
+      if (!panel || innerWidth <= 900) return { x: 0, y: 0, scale: 0.9 };
       const r = panel.getBoundingClientRect();
-      // the hero panel has no frame, so measure its text block instead of the full width
-      const left = sides[i] > 0 ? 0 : r.left + Math.min(r.width, 640);
+      const left = sides[i] > 0 ? 0 : r.right;
       // keep clear of the section index on the right edge (shown above 1100px)
       const right = sides[i] > 0 ? r.left : innerWidth - (innerWidth > 1100 ? 110 : 0);
       const freePx = Math.max(right - left - 48, 200);
       const x = ((left + right) / 2 / innerWidth - 0.5) * visW;
-      return { x, scale: Math.min(1, (freePx / innerWidth) * visW / 21) };
+      return { x, y: 0, scale: Math.min(1, (freePx / innerWidth) * visW / 21) };
     });
     const pad = innerHeight * 0.38;
     holds = secs.map((s) => {
@@ -341,15 +334,7 @@ export function startLattice(canvas: HTMLCanvasElement) {
 
     const i0 = Math.min(Math.floor(s), shapes.length - 2), f = clamp01(s - i0);
 
-    /* portrait assembly writes into the hero shape for about a second */
-    let heroDirty = false;
-    if (hero && heroTarget && heroBlend < 1) {
-      heroBlend = reduce ? 1 : Math.min(1, heroBlend + dt * 0.85);
-      const hb = ease(heroBlend);
-      for (let h = 0; h < N * 3; h++) hero[h] = sphere[h] + (heroTarget[h] - sphere[h]) * hb;
-      heroDirty = true;
-    }
-    if (i0 !== seg || (heroDirty && (i0 === heroIdx || i0 + 1 === heroIdx))) {
+    if (i0 !== seg) {
       seg = i0;
       from.set(shapes[i0]);
       to.set(shapes[Math.min(i0 + 1, shapes.length - 1)]);
@@ -357,11 +342,11 @@ export function startLattice(canvas: HTMLCanvasElement) {
       aTo.needsUpdate = true;
     }
     uniforms.uProgress.value = f;
-    uniforms.uPortrait.value = heroTarget && heroIdx >= 0 ? Math.max(0, 1 - Math.abs(s - heroIdx)) * ease(heroBlend) : 0;
 
     /* layout: shape sits opposite the panel on wide screens */
     const pa = place[i0], pb = place[i0 + 1] ?? pa, pf = ease(f);
     group.position.x = pa.x + (pb.x - pa.x) * pf;
+    group.position.y = pa.y + (pb.y - pa.y) * pf;
     group.scale.setScalar(pa.scale + (pb.scale - pa.scale) * pf);
     const fl = (flat[i0] ? 1 - f : 0) + (flat[i0 + 1] ? f : 0);
     ry += ((reduce ? 0 : t * 0.12) + mouse.x * 0.5 - ry) * k(3.6);

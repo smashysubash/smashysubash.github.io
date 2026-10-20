@@ -3,7 +3,7 @@
  * Each builder returns a Float32Array of n xyz triples, roughly within a 20-unit box around the origin.
  *
  * Two families:
- * - icons (Impact, Experience, Platform, AI): line art drawn as dotted outlines, like the hero avatar.
+ * - icons (Impact, Experience, Platform, AI): line art drawn as dotted outlines.
  *   They face the viewer, so the lattice keeps them flat-on and only tilts them with the cursor.
  * - abstract forms (Skills, Certs, Writing, Contact): calm 3D figures that slowly rotate.
  */
@@ -77,14 +77,33 @@ function lineArt(n: number, strokes: P[][], fills: P[][] = [], { fillShare = 0.1
   return out;
 }
 
-/* ---------- intro fallback ---------- */
+/* ---------- fallback + hero ---------- */
 
-/** Shown until the avatar points arrive. */
+/** Fallback for an unknown shape name. */
 export function sphere(n: number): Shape {
   const g = Math.PI * (3 - Math.sqrt(5)), o = new Float32Array(n * 3);
   for (let i = 0; i < n; i++) {
     const y = 1 - (i / (n - 1)) * 2, r = Math.sqrt(1 - y * y), t = g * i;
     o.set([Math.cos(t) * r * 8.5, y * 8.5, Math.sin(t) * r * 8.5], i * 3);
+  }
+  return o;
+}
+
+/** Hero: a soft halo framing the photo. Rings sized for a 4:5 arch about 20 units tall at scale 1. */
+export function halo(n: number): Shape {
+  const o = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) {
+    const q = rnd(), a = rnd() * TAU;
+    if (q < 0.7) {
+      // three loose rings just outside the frame, each slightly offset and tilted in depth
+      const k = i % 3, rx = 8.4 + k * 0.6, ry = 10.4 + k * 0.7, w = 0.25 + k * 0.18;
+      const x = Math.cos(a) * rx + jit(w), y = Math.sin(a) * ry + jit(w);
+      o.set([x, y, Math.sin(a * 2 + k) * 1.4 + jit(0.4)], i * 3);
+    } else {
+      // dust drifting further out
+      const r = 1.08 + rnd() * 0.3;
+      o.set([Math.cos(a) * 8.4 * r + jit(0.4), Math.sin(a) * 10.4 * r + jit(0.4), jit(2.5)], i * 3);
+    }
   }
   return o;
 }
@@ -232,28 +251,4 @@ export function ripples(n: number): Shape {
     o.set([Math.cos(a) * r + jit(0.1), Math.sin(a) * r * 0.62 + jit(0.1), z + jit(0.12)], i * 3);
   }
   return o;
-}
-
-/**
- * Avatar point cloud precomputed by tools/avatar.ts: Int16 quads (x, y, z, shade),
- * positions × 1000, shade × 32767, shuffled so the first n points are an even sample.
- * Resolves to null if the file is missing or too small.
- */
-export async function portrait(n: number, src: string): Promise<{ shape: Shape; shade: Float32Array } | null> {
-  try {
-    const res = await fetch(src);
-    if (!res.ok) return null;
-    const q = new Int16Array(await res.arrayBuffer());
-    if (q.length < n * 4) return null;
-    const shape = new Float32Array(n * 3), shade = new Float32Array(n);
-    for (let i = 0; i < n; i++) {
-      shape[i * 3] = q[i * 4] / 1000;
-      shape[i * 3 + 1] = q[i * 4 + 1] / 1000;
-      shape[i * 3 + 2] = q[i * 4 + 2] / 1000;
-      shade[i] = q[i * 4 + 3] / 32767;
-    }
-    return { shape, shade };
-  } catch {
-    return null;
-  }
 }

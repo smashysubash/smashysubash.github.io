@@ -1,6 +1,6 @@
 /**
  * Build-time social preview images (1200×630): Satori lays out the card, sharp rasterises it.
- * The portrait on the right is drawn from the same points as the hero lattice.
+ * The photo on the right is the same arch-framed duotone as the hero.
  */
 import satori from 'satori';
 import sharp from 'sharp';
@@ -23,31 +23,20 @@ function fonts() {
   return fontsP;
 }
 
-/** Orthographic dot rendering of public/portrait.bin, as a PNG data URI. */
-let portraitP: Promise<string> | null = null;
-function portrait(w = 460, h = 560) {
-  portraitP ??= (async () => {
-    const q = new Int16Array((await readFile(join(root, 'public/portrait.bin'))).buffer.slice(0));
-    const n = q.length / 4, acc = new Float32Array(w * h);
-    // portrait spans roughly ±11 × ±9 world units; fit the height with a little margin
-    const s = (h * 0.92) / 18;
-    for (let i = 0; i < n; i++) {
-      const x = Math.round(w / 2 + (q[i * 4] / 1000) * s), y = Math.round(h / 2 - (q[i * 4 + 1] / 1000) * s);
-      const v = 0.5 + 0.5 * (q[i * 4 + 3] / 32767);
-      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
-        const xx = x + dx, yy = y + dy;
-        if (xx >= 0 && yy >= 0 && xx < w && yy < h) acc[yy * w + xx] += v * (dx || dy ? 0.18 : 0.75);
-      }
-    }
-    const rgba = new Uint8Array(w * h * 4);
-    for (let i = 0; i < w * h; i++) {
-      const a = Math.min(1, acc[i]);
-      rgba[i * 4] = 125; rgba[i * 4 + 1] = 162; rgba[i * 4 + 2] = 255; rgba[i * 4 + 3] = Math.round(a * 255);
-    }
-    const png = await sharp(rgba, { raw: { width: w, height: h, channels: 4 } }).png().toBuffer();
+/** The hero photo in its arch frame, as a PNG data URI. */
+let photoP: Promise<string> | null = null;
+function photo(w = 400, h = 500) {
+  photoP ??= (async () => {
+    const r = w / 2;
+    const mask = Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"><path d="M0,${r} A${r},${r} 0 0 1 ${w},${r} L${w},${h - 16} Q${w},${h} ${w - 16},${h} L16,${h} Q0,${h} 0,${h - 16} Z" fill="#fff"/></svg>`);
+    const png = await sharp(join(root, 'public/hero.webp'))
+      .resize(w, h)
+      .composite([{ input: mask, blend: 'dest-in' }])
+      .png()
+      .toBuffer();
     return `data:image/png;base64,${png.toString('base64')}`;
   })();
-  return portraitP;
+  return photoP;
 }
 
 /** Cut at a word boundary so previews never end mid-word. */
@@ -60,9 +49,9 @@ const el = (type: string, style: Record<string, unknown>, children?: unknown, ex
 });
 
 export async function renderOg(opts: { eyebrow: string; title: string; subtitle: string; chips?: string[] }) {
-  const img = await portrait();
+  const img = await photo();
   const tree = el('div', { width: W, height: H, display: 'flex', background: C.bg, color: C.ink, fontFamily: 'Plex Mono', position: 'relative' }, [
-    el('img', { position: 'absolute', right: 30, top: 35, width: 460, height: 560, opacity: 0.95 }, undefined, { src: img, width: 460, height: 560 }),
+    el('img', { position: 'absolute', right: 70, top: 65, width: 400, height: 500 }, undefined, { src: img, width: 400, height: 500 }),
     el('div', { display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '64px 72px 84px', width: 720, height: H, boxSizing: 'border-box' }, [
       el('div', { display: 'flex', fontSize: 22, letterSpacing: 3, color: C.warm, textTransform: 'uppercase' }, opts.eyebrow),
       el('div', { display: 'flex', flexDirection: 'column', gap: 18 }, [
