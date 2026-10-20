@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://smashysubash.github.io/sitemap-index.xml

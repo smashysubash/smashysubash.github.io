@@ -10,6 +10,7 @@ import CommandMenu from '../components/CommandMenu.astro';
 import Tldr from '../components/Tldr.astro';
 import { profile, services } from '../data/site';
 import { url } from '../lib/url';
+import { homeSchema, articleSchema } from '../lib/schema';
 
 interface Props {
   title?: string;
@@ -18,12 +19,21 @@ interface Props {
   home?: boolean;
   /** Social preview image, relative to the site root (see src/pages/og). */
   ogImage?: string;
+  /** Case studies and posts describe themselves as articles for search engines. */
+  article?: { date?: Date };
+  /** Keep this page out of search results (the 404). */
+  noindex?: boolean;
 }
 
-const { title, description = profile.tagline, home = false, ogImage = 'og/index.png' } = Astro.props;
+const { title, description = profile.tagline, home = false, ogImage = 'og/index.png', article, noindex = false } = Astro.props;
 const pageTitle = title ? `${title} · ${profile.name}` : `${profile.name} · ${profile.headline}`;
 const canonical = new URL(Astro.url.pathname, Astro.site);
 const ogUrl = new URL(url(ogImage), Astro.site);
+const schema = home
+  ? homeSchema()
+  : article
+    ? articleSchema({ title: title ?? profile.name, description, url: canonical.href, image: ogUrl.href, date: article.date })
+    : null;
 const nav = [
   ['Experience', 'experience'],
   ['Platform', 'platform'],
@@ -52,6 +62,15 @@ const nav = [
     <meta property="og:image:height" content="630" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:image" content={ogUrl} />
+    <meta property="og:site_name" content="Subash S." />
+    <meta name="author" content="Subash S" />
+    {noindex && <meta name="robots" content="noindex" />}
+    <meta name="theme-color" content="#EEF1F6" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#090D15" media="(prefers-color-scheme: dark)" />
+    <link rel="apple-touch-icon" href={url('apple-touch-icon.png')} />
+    <link rel="manifest" href={url('site.webmanifest')} />
+    <link rel="sitemap" href={url('sitemap-index.xml')} />
+    {schema && <script type="application/ld+json" set:html={JSON.stringify(schema)} />}
     <script is:inline>
       try {
         const t = localStorage.getItem('ss-theme');

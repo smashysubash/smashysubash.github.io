@@ -13,6 +13,6 @@ const { Content } = await render(post);
 const date = post.data.pubDate?.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 ---
 
-<Article title={post.data.title} description={post.data.summary} eyebrow={date ? `Writing · ${date}` : 'Writing'} back={{ href: '/blog/', label: 'All writing' }} ogImage={`og/blog/${post.id}.png`}>
+<Article title={post.data.title} description={post.data.summary} eyebrow={date ? `Writing · ${date}` : 'Writing'} back={{ href: '/blog/', label: 'All writing' }} ogImage={`og/blog/${post.id}.png`} date={post.data.pubDate}>
   <Content />
 </Article>

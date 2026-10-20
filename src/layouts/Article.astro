@@ -12,12 +12,13 @@ interface Props {
   /** Shared with the home-page card so the title morphs across the page transition. */
   vtName?: string;
   ogImage?: string;
+  date?: Date;
 }
 
-const { title, description, eyebrow, badge, stack = [], back, vtName, ogImage } = Astro.props;
+const { title, description, eyebrow, badge, stack = [], back, vtName, ogImage, date } = Astro.props;
 ---
 
-<Base title={title} description={description} ogImage={ogImage}>
+<Base title={title} description={description} ogImage={ogImage} article={{ date }}>
   <main class="gutter">
     <article class="mx-auto flex max-w-[760px] flex-col gap-5 pt-[120px] pb-24">
       <a class="font-mono text-xs text-muted no-underline hover:text-accent" href={url(back.href)}>← {back.label}</a>
