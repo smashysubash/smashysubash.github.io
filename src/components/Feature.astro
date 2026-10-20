@@ -12,11 +12,11 @@ const d = project.data;
 
 <div class="flex flex-col gap-3 border-b border-line pb-4">
   {d.badge && <span class:list={['badge', d.badgeStyle === 'kind' && 'kind']}>{d.badge}</span>}
-  <h2 class="h2">{d.title}</h2>
+  <h2 class="h2" style={d.caseStudy ? `view-transition-name: p-${project.id}` : undefined}>{d.title}</h2>
   <p class="lead">{d.summary}</p>
   {d.points.length > 0 && <ul class="pts">{d.points.map((p) => <li>{p}</li>)}</ul>}
   <div class="flex flex-wrap items-center justify-between gap-3">
     <div class="chips">{d.stack.map((s) => <span class="chip">{s}</span>)}</div>
-    {d.caseStudy && <a class="font-mono text-xs text-accent no-underline hover:underline" href={url(`/projects/${project.id}/`)}>Read the case study →</a>}
+    {d.caseStudy && <a class="font-mono text-xs text-accent no-underline hover:underline" href={url(`/projects/${project.id}/`)} data-umami-event="case-study" data-umami-event-project={project.id}>Read the case study →</a>}
   </div>
 </div>

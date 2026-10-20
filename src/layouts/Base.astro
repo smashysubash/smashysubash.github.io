@@ -1,6 +1,9 @@
 ---
 import '../styles/global.css';
-import { profile } from '../data/site';
+import 'lenis/dist/lenis.css';
+import CommandMenu from '../components/CommandMenu.astro';
+import Tldr from '../components/Tldr.astro';
+import { profile, services } from '../data/site';
 import { url } from '../lib/url';
 
 interface Props {
@@ -8,11 +11,14 @@ interface Props {
   description?: string;
   /** Home page nav links to sections; inner pages link back home. */
   home?: boolean;
+  /** Social preview image, relative to the site root (see src/pages/og). */
+  ogImage?: string;
 }
 
-const { title, description = profile.tagline, home = false } = Astro.props;
+const { title, description = profile.tagline, home = false, ogImage = 'og/index.png' } = Astro.props;
 const pageTitle = title ? `${title} · ${profile.name}` : `${profile.name} · ${profile.headline}`;
 const canonical = new URL(Astro.url.pathname, Astro.site);
+const ogUrl = new URL(url(ogImage), Astro.site);
 const nav = [
   ['Experience', 'experience'],
   ['Platform', 'platform'],
@@ -36,6 +42,11 @@ const nav = [
     <meta property="og:description" content={description} />
     <meta property="og:type" content="website" />
     <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={ogUrl} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content={ogUrl} />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -48,40 +59,77 @@ const nav = [
         if (t) document.documentElement.dataset.theme = t;
       } catch {}
     </script>
+    {services.umamiWebsiteId && <script is:inline defer src="https://cloud.umami.is/script.js" data-website-id={services.umamiWebsiteId}></script>}
   </head>
   <body>
     <header class="gutter fixed inset-x-0 z-20" style="top: env(safe-area-inset-top, 0px); background: linear-gradient(var(--bg), transparent)">
       <div class="mx-auto flex h-[60px] max-w-[1280px] items-center gap-4">
         <a class="font-display text-[17px] font-extrabold no-underline" style="font-stretch: 118%" href={home ? '#intro' : url('/')}>{profile.name}</a>
-        <nav aria-label="Sections" class="ml-auto hidden gap-4 min-[861px]:flex">
+        <nav aria-label="Sections" class="ml-auto hidden gap-4 min-[961px]:flex">
           {nav.map(([label, id]) => (
             <a class="font-mono text-[12.5px] text-muted no-underline hover:text-ink" href={home ? `#${id}` : url(`/#${id}`)}>{label}</a>
           ))}
         </nav>
-        <button
-          id="theme"
-          type="button"
-          aria-label="Switch colour theme"
-          class="ml-auto h-8 cursor-pointer rounded-full border border-line bg-panel px-3 font-mono text-xs text-ink min-[861px]:ml-0"
-        >Theme</button>
+        <div class="ml-auto flex items-center gap-2 min-[961px]:ml-2">
+          <button type="button" data-tldr class="pill">TL;DR</button>
+          <button type="button" data-cmdk class="pill" aria-label="Open command menu (Ctrl or Cmd + K)"><kbd>⌘K</kbd></button>
+          <button id="theme" type="button" aria-label="Switch colour theme" class="pill">Theme</button>
+        </div>
       </div>
     </header>
     <slot />
+    <CommandMenu />
+    <Tldr />
     <script>
+      import Lenis from 'lenis';
+      import { track, trackRef } from '../lib/analytics';
+
       const root = document.documentElement;
+
+      /* theme */
       const btn = document.getElementById('theme')!;
       const mq = matchMedia('(prefers-color-scheme: dark)');
       const current = () => root.dataset.theme ?? (mq.matches ? 'dark' : 'light');
       const label = () => { btn.textContent = current() === 'dark' ? 'Light' : 'Dark'; };
-      btn.addEventListener('click', () => {
+      function toggleTheme() {
         const next = current() === 'dark' ? 'light' : 'dark';
         root.dataset.theme = next;
         try { localStorage.setItem('ss-theme', next); } catch {}
         label();
         document.dispatchEvent(new Event('themechange'));
-      });
+        track('theme', { to: next });
+      }
+      btn.addEventListener('click', toggleTheme);
       mq.addEventListener('change', label);
       label();
+
+      /* TL;DR dialog */
+      const tldr = document.getElementById('tldr') as HTMLDialogElement;
+      const openTldr = () => { if (!tldr.open) { tldr.showModal(); track('tldr-open'); } };
+      document.querySelectorAll('[data-tldr]').forEach((b) => b.addEventListener('click', openTldr));
+      tldr.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', () => tldr.close()));
+      tldr.addEventListener('click', (e) => { if (e.target === tldr) tldr.close(); });
+
+      /* command menu actions */
+      document.addEventListener('cmdk-action', (e) => {
+        const action = (e as CustomEvent<string>).detail;
+        if (action === 'tldr') openTldr();
+        else if (action === 'theme') toggleTheme();
+        else if (action === 'copy-email') {
+          navigator.clipboard?.writeText('smashysubash@gmail.com').then(() => track('email-copy', { from: 'cmdk' }), () => {});
+        }
+      });
+
+      /* smooth scrolling; native scrolling when the visitor prefers less motion */
+      if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        const lenis = new Lenis({ autoRaf: true, anchors: { offset: -20 }, lerp: 0.1 });
+        // modals stop the page behind them from scrolling
+        for (const d of document.querySelectorAll('dialog')) {
+          new MutationObserver(() => (d.open ? lenis.stop() : lenis.start())).observe(d, { attributes: true, attributeFilter: ['open'] });
+        }
+      }
+
+      trackRef();
     </script>
   </body>
 </html>

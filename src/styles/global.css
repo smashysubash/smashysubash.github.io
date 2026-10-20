@@ -37,6 +37,26 @@
   --font-mono: var(--mono);
 }
 
+/* Cross-page transitions (no JS): pages cross-fade, and a project card's title morphs into
+   the case study heading via a shared view-transition-name. Off for reduced motion. */
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition { navigation: auto; }
+  ::view-transition-old(root), ::view-transition-new(root) { animation-duration: .35s; }
+}
+
+/* Scroll-driven reveals (no JS): panel content rises in as it enters the viewport.
+   Browsers without scroll timelines, and visitors who prefer less motion, just see the content. */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .stop:not(.hero) .panel > * {
+      animation: reveal linear both;
+      animation-timeline: view();
+      animation-range: entry 5% entry 55%;
+    }
+  }
+}
+@keyframes reveal { from { opacity: 0; transform: translateY(28px); } }
+
 @layer base {
   html { scroll-behavior: smooth; }
   body { background: var(--bg); color: var(--ink); font: 16px/1.6 var(--body); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
@@ -98,6 +118,35 @@
   .prose-page li::marker { color: var(--accent); }
   .prose-page code { font: 500 .9em var(--mono); background: var(--panel-solid); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; }
   .prose-page strong { font-weight: 600; }
+
+  .pill { height: 32px; padding: 0 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--panel-solid); color: var(--ink);
+    font: 500 12px var(--mono); cursor: pointer; transition: border-color .2s; }
+  .pill:hover { border-color: var(--accent); }
+  .pill kbd { font: inherit; }
+
+  /* dialogs: TL;DR and the command menu */
+  .modal { width: min(560px, calc(100vw - 32px)); max-height: min(80vh, 720px); margin: auto; padding: 24px; border: 1px solid var(--line); border-radius: 16px;
+    background: var(--panel-solid); color: var(--ink); box-shadow: 0 30px 80px -20px rgb(0 0 0 / .45); overflow: auto; }
+  .modal::backdrop { background: rgb(5 8 14 / .55); backdrop-filter: blur(6px); }
+  .modal[open] { animation: modal-in .22s cubic-bezier(.2,.8,.2,1); }
+  @keyframes modal-in { from { opacity: 0; transform: translateY(8px) scale(.98); } }
+  .modal-close { flex: none; width: 32px; height: 32px; border-radius: 999px; border: 1px solid var(--line); background: transparent; color: var(--muted); cursor: pointer; }
+  .modal-close:hover { color: var(--ink); border-color: var(--accent); }
+  .modal dd { margin: 2px 0 0; }
+
+  .cmdk { padding: 0; width: min(620px, calc(100vw - 32px)); margin-top: 12vh; }
+  .cmdk input { width: 100%; padding: 18px 20px; border: 0; border-bottom: 1px solid var(--line); background: transparent; color: var(--ink); font: 500 16px var(--body); outline: none; }
+  .cmdk ul { list-style: none; margin: 0; padding: 8px; max-height: 52vh; overflow: auto; }
+  .cmdk li { display: flex; justify-content: space-between; gap: 12px; padding: 10px 12px; border-radius: 8px; cursor: pointer; font-size: 14.5px; }
+  .cmdk li[aria-selected="true"] { background: color-mix(in srgb, var(--accent) 14%, transparent); }
+  .cmdk-hint { color: var(--muted); font: 500 12px var(--mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cmdk-empty { padding: 16px 20px; color: var(--muted); font-size: 14px; }
+  .cmdk-foot { display: flex; gap: 16px; padding: 10px 16px; border-top: 1px solid var(--line); color: var(--muted); font: 500 11px var(--mono); }
+
+  /* contact form */
+  .field { display: flex; flex-direction: column; gap: 4px; font: 500 12px var(--mono); color: var(--muted); }
+  .field input, .field textarea { font: 400 15px var(--body); color: var(--ink); background: var(--panel-solid); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; resize: vertical; }
+  .field input:focus, .field textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; border-color: transparent; }
 
   @media (max-width: 900px) {
     .stop, .stop.right { justify-content: center; }

@@ -245,7 +245,8 @@ export function startLattice(canvas: HTMLCanvasElement) {
       const r = panel.getBoundingClientRect();
       // the hero panel has no frame, so measure its text block instead of the full width
       const left = sides[i] > 0 ? 0 : r.left + Math.min(r.width, 640);
-      const right = sides[i] > 0 ? r.left : innerWidth;
+      // keep clear of the section index on the right edge (shown above 1100px)
+      const right = sides[i] > 0 ? r.left : innerWidth - (innerWidth > 1100 ? 110 : 0);
       const freePx = Math.max(right - left - 48, 200);
       const x = ((left + right) / 2 / innerWidth - 0.5) * visW;
       return { x, scale: Math.min(1, (freePx / innerWidth) * visW / 21) };
@@ -309,6 +310,10 @@ export function startLattice(canvas: HTMLCanvasElement) {
 
   let s = raw(), prevRaw = s, vel = 0, rx = 0, ry = 0, last = -1, seg = -1, running = true;
   const t0 = performance.now();
+  let prevNow = t0;
+  /* frame-rate independent smoothing: k(rate) is the share of the remaining distance covered this frame */
+  let dt = 1 / 60;
+  const k = (rate: number) => 1 - Math.exp(-rate * dt);
   document.addEventListener('visibilitychange', () => {
     running = !document.hidden;
     if (running) requestAnimationFrame(frame);
@@ -317,11 +322,13 @@ export function startLattice(canvas: HTMLCanvasElement) {
   function frame() {
     if (!running) return;
     const now = performance.now(), t = (now - t0) / 1000;
+    dt = Math.min((now - prevNow) / 1000, 0.25);
+    prevNow = now;
     uniforms.uTime.value = t;
 
     const target = raw();
-    s += reduce ? target - s : (target - s) * 0.08;
-    vel += ((reduce ? 0 : Math.max(-1, Math.min(1, (target - prevRaw) * 6))) - vel) * 0.1;
+    s += reduce ? target - s : (target - s) * k(5);
+    vel += ((reduce ? 0 : Math.max(-1, Math.min(1, ((target - prevRaw) / dt) * 0.1))) - vel) * k(6);
     prevRaw = target;
     uniforms.uVelocity.value = vel;
 
@@ -336,7 +343,7 @@ export function startLattice(canvas: HTMLCanvasElement) {
     /* portrait assembly writes into the hero shape for about a second */
     let heroDirty = false;
     if (hero && heroTarget && heroBlend < 1) {
-      heroBlend = reduce ? 1 : Math.min(1, heroBlend + 0.014);
+      heroBlend = reduce ? 1 : Math.min(1, heroBlend + dt * 0.85);
       const hb = ease(heroBlend);
       for (let h = 0; h < N * 3; h++) hero[h] = sphere[h] + (heroTarget[h] - sphere[h]) * hb;
       heroDirty = true;
@@ -356,16 +363,16 @@ export function startLattice(canvas: HTMLCanvasElement) {
     group.position.x = pa.x + (pb.x - pa.x) * pf;
     group.scale.setScalar(pa.scale + (pb.scale - pa.scale) * pf);
     const fl = (flat[i0] ? 1 - f : 0) + (flat[i0 + 1] ? f : 0);
-    ry += ((reduce ? 0 : t * 0.12) + mouse.x * 0.5 - ry) * 0.06;
-    rx += (mouse.y * 0.25 - rx) * 0.06;
+    ry += ((reduce ? 0 : t * 0.12) + mouse.x * 0.5 - ry) * k(3.6);
+    rx += (mouse.y * 0.25 - rx) * k(3.6);
     group.rotation.y = ry * (1 - fl) + mouse.x * 0.3 * fl;
     group.rotation.x = rx;
     group.updateMatrixWorld();
 
     /* cursor push fades in while the mouse moves and eases out after it stops */
     const wantPush = !reduce && hasPointer && now - lastMove < 1800 ? 1 : 0;
-    uniforms.uMouseStrength.value += (wantPush - uniforms.uMouseStrength.value) * 0.08;
-    if (hasPointer && project()) uniforms.uMouse.value.lerp(hit, 0.25);
+    uniforms.uMouseStrength.value += (wantPush - uniforms.uMouseStrength.value) * k(5);
+    if (hasPointer && project()) uniforms.uMouse.value.lerp(hit, k(15));
 
     if (composer && dark) composer.render();
     else renderer.render(scene, cam);

@@ -19,6 +19,8 @@ const d = project.data;
   badge={d.badge}
   stack={d.stack}
   back={{ href: `/#${d.section}`, label: 'Back to the work' }}
+  vtName={`p-${project.id}`}
+  ogImage={`og/projects/${project.id}.png`}
 >
   <Content />
 </Article>

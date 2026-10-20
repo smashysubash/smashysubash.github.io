@@ -3,6 +3,7 @@ import { getCollection } from 'astro:content';
 import Base from '../layouts/Base.astro';
 import Feature from '../components/Feature.astro';
 import ProjectCard from '../components/ProjectCard.astro';
+import ContactForm from '../components/ContactForm.astro';
 import { profile, impact, experience, skills, certifications, portraitPoints } from '../data/site';
 import { url } from '../lib/url';
 
@@ -41,12 +42,13 @@ const stops = [
         <p class="max-w-[38ch] text-[clamp(17px,1.6vw,20px)]">{profile.tagline}</p>
         <div class="flex flex-wrap gap-2.5">
           <a class="btn primary" href="#impact">See the work</a>
-          <a class="btn" href={url(profile.resume)} target="_blank" rel="noopener">Resume (PDF)</a>
+          <a class="btn" href={url(profile.resume)} target="_blank" rel="noopener" data-umami-event="resume-open" data-umami-event-from="hero">Resume (PDF)</a>
+          <button type="button" class="btn" data-tldr>TL;DR</button>
           <a class="btn" href="#contact">Get in touch</a>
         </div>
         <div class="flex flex-wrap gap-[18px] font-mono text-[13px] text-muted">
-          <a class="no-underline hover:text-accent" href={profile.github} target="_blank" rel="noopener">GitHub ↗</a>
-          <a class="no-underline hover:text-accent" href={profile.linkedin} target="_blank" rel="noopener">LinkedIn ↗</a>
+          <a class="no-underline hover:text-accent" href={profile.github} target="_blank" rel="noopener" data-umami-event="outbound" data-umami-event-to="github">GitHub ↗</a>
+          <a class="no-underline hover:text-accent" href={profile.linkedin} target="_blank" rel="noopener" data-umami-event="outbound" data-umami-event-to="linkedin">LinkedIn ↗</a>
         </div>
       </div>
     </section>
@@ -155,10 +157,11 @@ const stops = [
         <span class="eyebrow"><b>08</b> Contact</span>
         <h2 class="h2">{profile.contactHeadline}</h2>
         <p class="lead">{profile.contactLead}</p>
+        <ContactForm />
         <div class="c-row"><a href={`mailto:${profile.email}`} id="email">{profile.email}</a><button type="button" id="copy">Copy</button></div>
-        <div class="c-row"><a href={profile.linkedin} target="_blank" rel="noopener">linkedin.com/in/subash07</a><span>↗</span></div>
-        <div class="c-row"><a href={profile.github} target="_blank" rel="noopener">github.com/smashysubash</a><span>↗</span></div>
-        <div class="c-row"><a href={url(profile.resume)} target="_blank" rel="noopener">Resume (PDF)</a><span>↗</span></div>
+        <div class="c-row"><a href={profile.linkedin} target="_blank" rel="noopener" data-umami-event="outbound" data-umami-event-to="linkedin">linkedin.com/in/subash07</a><span>↗</span></div>
+        <div class="c-row"><a href={profile.github} target="_blank" rel="noopener" data-umami-event="outbound" data-umami-event-to="github">github.com/smashysubash</a><span>↗</span></div>
+        <div class="c-row"><a href={url(profile.resume)} target="_blank" rel="noopener" data-umami-event="resume-open" data-umami-event-from="contact">Resume (PDF)</a><span>↗</span></div>
         <span class="font-mono text-xs text-muted">{profile.name} · {new Date().getFullYear()}</span>
       </div>
     </section>
@@ -178,6 +181,8 @@ const stops = [
 </style>
 
 <script>
+  import { track } from '../lib/analytics';
+
   // three.js is the heavy part of the page; load it after the content so text paints first.
   const canvas = document.getElementById('lattice') as HTMLCanvasElement | null;
   if (canvas) import('../scripts/lattice').then((m) => m.startLattice(canvas));
@@ -188,6 +193,7 @@ const stops = [
     try {
       await navigator.clipboard.writeText(email?.textContent ?? '');
       copy.textContent = 'Copied';
+      track('email-copy', { from: 'contact' });
       setTimeout(() => (copy.textContent = 'Copy'), 1600);
     } catch {
       if (email) getSelection()?.selectAllChildren(email);

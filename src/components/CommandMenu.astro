@@ -1,0 +1,98 @@
+---
+import { getCollection } from 'astro:content';
+import { profile } from '../data/site';
+import { url } from '../lib/url';
+
+/** Everything the menu can do. `href` navigates; `action` is handled in the script below. */
+type Item = { label: string; hint: string; href?: string; action?: string; external?: boolean };
+
+const projects = (await getCollection('projects', (p) => p.data.caseStudy)).sort((a, b) => a.data.order - b.data.order);
+const items: Item[] = [
+  { label: 'Recruiter TL;DR', hint: 'Summary', action: 'tldr' },
+  { label: 'Copy email address', hint: profile.email, action: 'copy-email' },
+  { label: 'Open resume (PDF)', hint: 'Resume', href: url(profile.resume), external: true },
+  { label: 'Switch theme', hint: 'Light / dark', action: 'theme' },
+  ...[
+    ['Intro', 'intro'], ['Impact', 'impact'], ['Experience', 'experience'], ['Platform & infra', 'platform'],
+    ['AI', 'ai'], ['Skills', 'skills'], ['Certifications', 'certs'], ['Writing', 'writing'], ['Contact', 'contact'],
+  ].map(([label, id]) => ({ label, hint: 'Section', href: url(`/#${id}`) })),
+  ...projects.map((p) => ({ label: p.data.title, hint: 'Case study', href: url(`/projects/${p.id}/`) })),
+  { label: 'GitHub', hint: 'github.com/smashysubash', href: profile.github, external: true },
+  { label: 'LinkedIn', hint: 'linkedin.com/in/subash07', href: profile.linkedin, external: true },
+];
+---
+
+<dialog id="cmdk" class="modal cmdk" aria-label="Command menu">
+  <label class="sr-only" for="cmdk-input">Search sections, projects and actions</label>
+  <input id="cmdk-input" type="text" autocomplete="off" spellcheck="false" placeholder="Jump to a section, project or action…" role="combobox" aria-expanded="true" aria-controls="cmdk-list" />
+  <ul id="cmdk-list" role="listbox">
+    {items.map((it, i) => (
+      <li role="option" id={`cmdk-${i}`} data-label={it.label.toLowerCase() + ' ' + it.hint.toLowerCase()} data-href={it.href} data-action={it.action} data-external={it.external ? '1' : undefined}>
+        <span>{it.label}</span><span class="cmdk-hint">{it.hint}</span>
+      </li>
+    ))}
+  </ul>
+  <p class="cmdk-empty" hidden>Nothing matches. Try "AI" or "resume".</p>
+  <div class="cmdk-foot"><span>↑↓ to move</span><span>↵ to open</span><span>esc to close</span></div>
+</dialog>
+
+<script>
+  import { track } from '../lib/analytics';
+
+  const dlg = document.getElementById('cmdk') as HTMLDialogElement;
+  const input = document.getElementById('cmdk-input') as HTMLInputElement;
+  const empty = dlg.querySelector<HTMLElement>('.cmdk-empty')!;
+  const all = [...dlg.querySelectorAll<HTMLLIElement>('li[role="option"]')];
+  let visible = all, cur = 0;
+
+  function render() {
+    const q = input.value.trim().toLowerCase();
+    visible = all.filter((li) => !q || q.split(/\s+/).every((w) => li.dataset.label!.includes(w)));
+    all.forEach((li) => (li.hidden = !visible.includes(li)));
+    empty.hidden = visible.length > 0;
+    cur = Math.min(cur, Math.max(visible.length - 1, 0));
+    visible.forEach((li, i) => li.setAttribute('aria-selected', String(i === cur)));
+    if (visible[cur]) { input.setAttribute('aria-activedescendant', visible[cur].id); visible[cur].scrollIntoView({ block: 'nearest' }); }
+  }
+
+  function open() {
+    if (dlg.open) return;
+    input.value = '';
+    cur = 0;
+    render();
+    dlg.showModal();
+    input.focus();
+    track('cmdk-open');
+  }
+
+  function run(li: HTMLLIElement | undefined) {
+    if (!li) return;
+    dlg.close();
+    const { href, action, external } = li.dataset;
+    track('cmdk-run', { item: li.querySelector('span')?.textContent ?? '' });
+    if (href) {
+      if (external) window.open(href, '_blank', 'noopener');
+      else location.href = href;
+      return;
+    }
+    document.dispatchEvent(new CustomEvent('cmdk-action', { detail: action }));
+  }
+
+  input.addEventListener('input', () => { cur = 0; render(); });
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowDown') { cur = (cur + 1) % Math.max(visible.length, 1); render(); e.preventDefault(); }
+    else if (e.key === 'ArrowUp') { cur = (cur - 1 + visible.length) % Math.max(visible.length, 1); render(); e.preventDefault(); }
+    else if (e.key === 'Enter') { run(visible[cur]); e.preventDefault(); }
+  });
+  all.forEach((li) => {
+    li.addEventListener('click', () => run(li));
+    li.addEventListener('mousemove', () => { const i = visible.indexOf(li); if (i !== cur) { cur = i; render(); } });
+  });
+  dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
+
+  addEventListener('keydown', (e) => {
+    const typing = (e.target as HTMLElement)?.closest?.('input, textarea, [contenteditable]');
+    if ((e.key === 'k' && (e.metaKey || e.ctrlKey)) || (e.key === '/' && !typing)) { e.preventDefault(); open(); }
+  });
+  document.querySelectorAll('[data-cmdk]').forEach((b) => b.addEventListener('click', open));
+</script>

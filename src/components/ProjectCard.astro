@@ -12,9 +12,14 @@ const d = project.data;
 const Tag = d.caseStudy ? 'a' : 'div';
 ---
 
-<Tag class:list={['card', span && 'col-span-full']} href={d.caseStudy ? url(`/projects/${project.id}/`) : undefined}>
+<Tag
+  class:list={['card', span && 'col-span-full']}
+  href={d.caseStudy ? url(`/projects/${project.id}/`) : undefined}
+  data-umami-event={d.caseStudy ? 'case-study' : undefined}
+  data-umami-event-project={d.caseStudy ? project.id : undefined}
+>
   {d.badge && <span class:list={['badge', d.badgeStyle === 'kind' && 'kind']}>{d.badge}</span>}
-  <h3 class="h3">{d.title}</h3>
+  <h3 class="h3" style={d.caseStudy ? `view-transition-name: p-${project.id}` : undefined}>{d.title}</h3>
   <p>{d.summary}</p>
   {d.stack.length > 0 && (
     <div class="chips mt-auto pt-1">

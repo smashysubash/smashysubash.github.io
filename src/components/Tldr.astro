@@ -1,0 +1,29 @@
+---
+import { profile, tldr } from '../data/site';
+import { url } from '../lib/url';
+---
+
+<dialog id="tldr" class="modal" aria-labelledby="tldr-title">
+  <div class="flex flex-col gap-4">
+    <div class="flex items-start justify-between gap-4">
+      <div>
+        <span class="eyebrow"><b>TL;DR</b> For recruiters</span>
+        <h2 id="tldr-title" class="h2 mt-2">{profile.name}</h2>
+        <p class="mt-1 text-[17px] font-semibold text-accent">{tldr.role}</p>
+      </div>
+      <button type="button" class="modal-close" data-close aria-label="Close">✕</button>
+    </div>
+    <dl class="grid gap-3 text-[15px]">
+      <div><dt class="eyebrow">Experience</dt><dd>{tldr.experience}</dd></div>
+      <div><dt class="eyebrow">Location</dt><dd>{tldr.location}</dd></div>
+      <div><dt class="eyebrow">Core stack</dt><dd class="chips mt-1">{tldr.stack.map((s) => <span class="chip core">{s}</span>)}</dd></div>
+      <div><dt class="eyebrow">Proof</dt><dd><ul class="pts mt-1">{tldr.numbers.map((n) => <li>{n}</li>)}</ul></dd></div>
+      <div><dt class="eyebrow">AI</dt><dd>{tldr.ai}</dd></div>
+    </dl>
+    <div class="flex flex-wrap gap-2.5">
+      <a class="btn primary" href={url(profile.resume)} target="_blank" rel="noopener" data-umami-event="resume-open" data-umami-event-from="tldr">Resume (PDF)</a>
+      <a class="btn" href={url('/#contact')} data-close>Contact</a>
+      <a class="btn" href={profile.linkedin} target="_blank" rel="noopener" data-umami-event="outbound" data-umami-event-to="linkedin">LinkedIn</a>
+    </div>
+  </div>
+</dialog>

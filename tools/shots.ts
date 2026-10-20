@@ -36,6 +36,25 @@ for (const theme of ['dark', 'light'] as const) {
   }
   await page.close();
 }
+/* dialogs: command menu (with a search typed) and the recruiter TL;DR */
+{
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, colorScheme: 'dark' });
+  page.on('pageerror', (e) => errors.push(`[ui] ${e.message}`));
+  await page.goto(base + '/', { waitUntil: 'networkidle' });
+  await page.waitForTimeout(1500);
+  await page.keyboard.press('Control+k');
+  await page.keyboard.type('case');
+  await page.waitForTimeout(400);
+  await page.screenshot({ path: `${out}/ui-cmdk.png` });
+  await page.keyboard.press('Escape');
+  await page.click('header [data-tldr]');
+  await page.waitForTimeout(500);
+  await page.screenshot({ path: `${out}/ui-tldr.png` });
+  await page.keyboard.press('Escape');
+  await page.goto(base + '/projects/multi-tenant-platform/', { waitUntil: 'networkidle' });
+  await page.screenshot({ path: `${out}/ui-case.png`, fullPage: true });
+  await page.close();
+}
 const mobile = await browser.newPage({ viewport: { width: 390, height: 844 }, colorScheme: 'dark', isMobile: true, hasTouch: true });
 await mobile.goto(base + '/', { waitUntil: 'networkidle' });
 await mobile.waitForTimeout(2500);
