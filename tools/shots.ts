@@ -1,0 +1,45 @@
+/**
+ * Screenshot the built site at a few scroll stops, in both themes, to check the lattice renders.
+ *
+ *   bun --bun run build && bun tools/shots.ts [outDir]
+ *
+ * Serves dist/ itself, so no dev server is needed. Uses software WebGL in headless Chromium.
+ */
+import { chromium } from 'playwright';
+import { join } from 'node:path';
+
+const out = process.argv[2] ?? 'shots';
+const dist = new URL('../dist/', import.meta.url).pathname;
+const server = Bun.serve({
+  port: 0,
+  async fetch(req) {
+    let path = decodeURIComponent(new URL(req.url).pathname);
+    if (path.endsWith('/')) path += 'index.html';
+    const file = Bun.file(join(dist, path));
+    return (await file.exists()) ? new Response(file) : new Response('not found', { status: 404 });
+  },
+});
+const base = `http://localhost:${server.port}`;
+
+const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
+const errors: string[] = [];
+for (const theme of ['dark', 'light'] as const) {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, colorScheme: theme });
+  page.on('console', (m) => { if (m.type() === 'error') errors.push(`[${theme}] ${m.text()}`); });
+  page.on('pageerror', (e) => errors.push(`[${theme}] ${e.message}`));
+  await page.goto(base + '/', { waitUntil: 'networkidle' });
+  await page.waitForTimeout(2500);
+  for (const id of ['intro', 'impact', 'platform', 'ai', 'skills', 'contact']) {
+    await page.evaluate((id) => document.getElementById(id)?.scrollIntoView({ block: 'center', behavior: 'instant' as ScrollBehavior }), id);
+    await page.waitForTimeout(6000);
+    await page.screenshot({ path: `${out}/${theme}-${id}.png` });
+  }
+  await page.close();
+}
+const mobile = await browser.newPage({ viewport: { width: 390, height: 844 }, colorScheme: 'dark', isMobile: true, hasTouch: true });
+await mobile.goto(base + '/', { waitUntil: 'networkidle' });
+await mobile.waitForTimeout(2500);
+await mobile.screenshot({ path: `${out}/mobile-intro.png` });
+await browser.close();
+server.stop();
+console.log(errors.length ? `console errors:\n${errors.join('\n')}` : 'no console errors');

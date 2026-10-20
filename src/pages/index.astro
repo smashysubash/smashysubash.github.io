@@ -3,7 +3,7 @@ import { getCollection } from 'astro:content';
 import Base from '../layouts/Base.astro';
 import Feature from '../components/Feature.astro';
 import ProjectCard from '../components/ProjectCard.astro';
-import { profile, impact, experience, skills, certifications, portrait } from '../data/site';
+import { profile, impact, experience, skills, certifications, portraitPoints } from '../data/site';
 import { url } from '../lib/url';
 
 const projects = (await getCollection('projects')).sort((a, b) => a.data.order - b.data.order);
@@ -24,11 +24,10 @@ const stops = [
   { id: 'writing', name: 'Writing' },
   { id: 'contact', name: 'Contact' },
 ];
-const portraitCfg = JSON.stringify({ ...portrait, src: url(portrait.src) });
 ---
 
 <Base home>
-  <canvas id="lattice" class="fixed inset-0 z-0 block h-full w-full" aria-hidden="true" data-portrait={portraitCfg}></canvas>
+  <canvas id="lattice" class="fixed inset-0 z-0 block h-full w-full" aria-hidden="true" data-portrait={url(portraitPoints)}></canvas>
 
   <nav id="hud" aria-label="Sections" class="fixed top-1/2 z-15 hidden -translate-y-1/2 flex-col items-end gap-2 font-mono text-[11px] tracking-[.06em] uppercase min-[1101px]:flex" style="right: max(16px, env(safe-area-inset-right, 0px))">
     {stops.map((s) => <a href={`#${s.id}`}><i></i><span>{s.name}</span></a>)}

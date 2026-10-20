@@ -25,3 +25,6 @@ pnpm-debug.log*
 
 # personal source material, never publish
 linkedin.pdf
+
+# Playwright screenshots
+shots/

@@ -138,48 +138,26 @@ export function nfcTag(n: number): Shape {
   });
 }
 
-export type PortraitConfig = {
-  src: string;
-  crop: number[];
-  focus: number[];
-  radius: number;
-  height: number;
-  depth: number;
-};
-
 /**
- * Portrait relief: points land where the photo is bright, faded out towards the edges,
- * with depth from brightness plus a gentle bulge. Resolves to null if the image fails.
+ * Portrait point cloud precomputed by tools/portrait.ts: Int16 quads (x, y, z, shade),
+ * positions × 1000, shade × 32767, shuffled so the first n points are an even sample.
+ * Resolves to null if the file is missing or too small.
  */
-export function portrait(n: number, cfg: PortraitConfig): Promise<{ shape: Shape; lum: Float32Array } | null> {
-  return new Promise((resolve) => {
-    const img = new Image();
-    img.onerror = () => resolve(null);
-    img.onload = () => {
-      const S = 160, c = document.createElement('canvas');
-      c.width = c.height = S;
-      const g = c.getContext('2d', { willReadFrequently: true });
-      if (!g) return resolve(null);
-      const [x0, y0, x1, y1] = cfg.crop;
-      const sw = img.width * (x1 - x0), sh = img.height * (y1 - y0);
-      g.drawImage(img, img.width * x0, img.height * y0, sw, sh, 0, 0, S, S);
-      const d = g.getImageData(0, 0, S, S).data, L = new Float32Array(S * S);
-      for (let p = 0; p < S * S; p++) L[p] = (0.299 * d[p * 4] + 0.587 * d[p * 4 + 1] + 0.114 * d[p * 4 + 2]) / 255;
-      const fx = (cfg.focus[0] - x0) / (x1 - x0), fy = (cfg.focus[1] - y0) / (y1 - y0);
-      const out = new Float32Array(n * 3), lum = new Float32Array(n), asp = sw / sh, H = cfg.height;
-      let k = 0, guard = 0;
-      while (k < n && guard < n * 400) {
-        guard++;
-        const u = rnd(), v = rnd(), l = L[Math.floor(v * S) * S + Math.floor(u * S)];
-        const dd = Math.hypot((u - fx) * asp, v - fy) / cfg.radius;
-        if (rnd() > Math.pow(l, 1.5) * Math.min(Math.max(1.35 - dd, 0), 1)) continue;
-        const bulge = Math.cos(Math.min(dd, 1.2) * 1.2) * 2.2;
-        out.set([(u - 0.5) * H * asp + jit(0.08), -(v - 0.5) * H + jit(0.08), (l - 0.5) * cfg.depth + bulge + jit(0.15)], k * 3);
-        lum[k] = l;
-        k++;
-      }
-      resolve(k < n ? null : { shape: out, lum });
-    };
-    img.src = cfg.src;
-  });
+export async function portrait(n: number, src: string): Promise<{ shape: Shape; shade: Float32Array } | null> {
+  try {
+    const res = await fetch(src);
+    if (!res.ok) return null;
+    const q = new Int16Array(await res.arrayBuffer());
+    if (q.length < n * 4) return null;
+    const shape = new Float32Array(n * 3), shade = new Float32Array(n);
+    for (let i = 0; i < n; i++) {
+      shape[i * 3] = q[i * 4] / 1000;
+      shape[i * 3 + 1] = q[i * 4 + 1] / 1000;
+      shape[i * 3 + 2] = q[i * 4 + 2] / 1000;
+      shade[i] = q[i * 4 + 3] / 32767;
+    }
+    return { shape, shade };
+  } catch {
+    return null;
+  }
 }
