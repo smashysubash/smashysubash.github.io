@@ -89,21 +89,22 @@ export function sphere(n: number): Shape {
   return o;
 }
 
-/** Hero: a soft halo framing the photo. Rings sized for a 4:5 arch about 20 units tall at scale 1. */
-export function halo(n: number): Shape {
+/**
+ * Hero: an even dot grid spread across the whole screen behind the text and photo.
+ * Spacing is loose on purpose (about 45px on a laptop). Points beyond the visible grid
+ * continue it off-screen, so they fly in from the edges when the next shape forms.
+ * The vertex shader animates it (uGrid): a slow wave lifts and brightens dots as it passes.
+ */
+export function dotGrid(n: number, spacing = 1.15): Shape {
   const o = new Float32Array(n * 3);
+  const side = Math.ceil(Math.sqrt(n));
+  // fill outward in rings from the centre, so the first points cover the screen evenly
+  const cells: [number, number][] = [];
+  for (let gy = -side; gy <= side; gy++) for (let gx = -side; gx <= side; gx++) cells.push([gx, gy]);
+  cells.sort((a, b) => Math.max(Math.abs(a[0]) * 0.58, Math.abs(a[1])) - Math.max(Math.abs(b[0]) * 0.58, Math.abs(b[1])));
   for (let i = 0; i < n; i++) {
-    const q = rnd(), a = rnd() * TAU;
-    if (q < 0.7) {
-      // three loose rings just outside the frame, each slightly offset and tilted in depth
-      const k = i % 3, rx = 8.4 + k * 0.6, ry = 10.4 + k * 0.7, w = 0.25 + k * 0.18;
-      const x = Math.cos(a) * rx + jit(w), y = Math.sin(a) * ry + jit(w);
-      o.set([x, y, Math.sin(a * 2 + k) * 1.4 + jit(0.4)], i * 3);
-    } else {
-      // dust drifting further out
-      const r = 1.08 + rnd() * 0.3;
-      o.set([Math.cos(a) * 8.4 * r + jit(0.4), Math.sin(a) * 10.4 * r + jit(0.4), jit(2.5)], i * 3);
-    }
+    const [gx, gy] = cells[i];
+    o.set([gx * spacing, gy * spacing, 0], i * 3);
   }
   return o;
 }

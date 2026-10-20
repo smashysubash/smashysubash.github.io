@@ -18,7 +18,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import * as S from './shapes';
 
 /** Stops where the shape faces the viewer instead of slowly spinning: the avatar and the line-art icons. */
-const FLAT = new Set(['halo', 'bill', 'career', 'tenants', 'chat']);
+const FLAT = new Set(['dots', 'bill', 'career', 'tenants', 'chat']);
 
 const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 const clamp01 = (v: number) => Math.min(Math.max(v, 0), 1);
@@ -42,6 +42,7 @@ const vertex = /* glsl */ `
   uniform float uRippleTime;
   uniform float uVelocity;
   uniform float uMotion;
+  uniform float uGrid;
   uniform vec3 uColA;
   uniform vec3 uColO;
   uniform vec3 uColW;
@@ -55,6 +56,15 @@ const vertex = /* glsl */ `
   void main() {
     float k = easeInOut(clamp((uProgress - aDelay) / 0.65, 0.0, 1.0));
     vec3 p = mix(aFrom, aTo, k);
+
+    // hero dot grid: a slow diagonal wave lifts dots toward the viewer and brightens them
+    float edge = 1.0, glow = 0.0;
+    if (uGrid > 0.001) {
+      float w = sin(p.x * 0.22 + p.y * 0.16 - uTime * 0.9 * uMotion) * cos(p.y * 0.2 - uTime * 0.5 * uMotion);
+      p.z += w * 1.6 * uGrid;
+      glow = max(w, 0.0) * uGrid;
+      edge = mix(1.0, 0.32 + 0.68 * glow, uGrid);
+    }
 
     // idle drift, so the cloud never looks frozen
     float ph = aRand * 6.2831;
@@ -89,7 +99,7 @@ const vertex = /* glsl */ `
     vec3 pal = aKind < 0.5 ? uColA : (aKind < 1.5 ? uColO : uColW);
     vColor = pal;
     // depth-of-field feel: points far from the focal plane fade a little
-    vAlpha = mix(1.0, 0.45, smoothstep(4.0, 14.0, abs(depth - 30.0))) * (1.0 + push * 0.6);
+    vAlpha = mix(1.0, 0.45, smoothstep(4.0, 14.0, abs(depth - 30.0))) * (1.0 + push * 0.6) * edge;
   }
 `;
 
@@ -108,7 +118,7 @@ const fragment = /* glsl */ `
 
 function shapeFor(el: HTMLElement, n: number, sphere: S.Shape): S.Shape {
   switch (el.dataset.shape) {
-    case 'halo': return S.halo(n);
+    case 'dots': return S.dotGrid(n);
     case 'bill': return S.cloudBill(n);
     case 'career': return S.careerGraph(n);
     case 'tenants': return S.tenantDbs(n);
@@ -148,6 +158,7 @@ export function startLattice(canvas: HTMLCanvasElement) {
   const shapes = secs.map((el) => shapeFor(el, N, sphere));
   const sides = secs.map((el) => (el.classList.contains('right') ? 1 : -1));
   const flat = secs.map((el) => FLAT.has(el.dataset.shape ?? ''));
+  const gridIdx = secs.findIndex((el) => el.dataset.shape === 'dots');
 
   /* per-point attributes */
   const from = new Float32Array(shapes[0]), to = new Float32Array(shapes[Math.min(1, shapes.length - 1)]);
@@ -171,7 +182,7 @@ export function startLattice(canvas: HTMLCanvasElement) {
     uProgress: { value: 0 }, uTime: { value: 0 }, uSize: { value: 0.26 }, uPixelRatio: { value: dpr }, uScale: { value: innerHeight / 2 },
     uMouse: { value: new Vector3(99, 99, 0) }, uMouseStrength: { value: 0 },
     uRipple: { value: new Vector3() }, uRippleTime: { value: -10 },
-    uVelocity: { value: 0 }, uMotion: { value: reduce ? 0 : 1 },
+    uVelocity: { value: 0 }, uGrid: { value: 0 }, uMotion: { value: reduce ? 0 : 1 },
     uColA: { value: new Color() }, uColO: { value: new Color() }, uColW: { value: new Color() },
     uDark: { value: 1 }, uOpacity: { value: 1 },
   };
@@ -227,13 +238,15 @@ export function startLattice(canvas: HTMLCanvasElement) {
     const visH = 2 * Math.tan((cam.fov * Math.PI) / 360) * cam.position.z, visW = visH * cam.aspect;
     const pxToWorld = visH / innerHeight;
     place = secs.map((s, i) => {
+      if (s.dataset.shape === 'dots') return { x: 0, y: 0, scale: 1 };
       /* anchored: centre on the element (the hero photo) and size the shape to frame it */
       const anchor = s.querySelector<HTMLElement>('[data-lattice-anchor]');
       if (anchor) {
         const a = anchor.getBoundingClientRect(), sr = s.getBoundingClientRect();
         const x = ((a.left + a.width / 2) / innerWidth - 0.5) * visW;
         const y = -((a.top + a.height / 2) - (sr.top + sr.height / 2)) * pxToWorld;
-        return { x, y, scale: (a.height * pxToWorld * 0.53) / 10 };
+        // the floor's local units assume a photo about 19 units tall
+        return { x, y, scale: (a.height * pxToWorld) / 19 };
       }
       const panel = s.querySelector<HTMLElement>('.panel');
       if (!panel || innerWidth <= 900) return { x: 0, y: 0, scale: 0.9 };
@@ -342,6 +355,7 @@ export function startLattice(canvas: HTMLCanvasElement) {
       aTo.needsUpdate = true;
     }
     uniforms.uProgress.value = f;
+    uniforms.uGrid.value = gridIdx >= 0 ? Math.max(0, 1 - Math.abs(s - gridIdx)) : 0;
 
     /* layout: shape sits opposite the panel on wide screens */
     const pa = place[i0], pb = place[i0 + 1] ?? pa, pf = ease(f);

@@ -1,6 +1,6 @@
 /**
  * Build-time social preview images (1200×630): Satori lays out the card, sharp rasterises it.
- * The photo on the right is the same arch-framed duotone as the hero.
+ * The photo on the right is the same cut-out-in-a-card as the hero.
  */
 import satori from 'satori';
 import sharp from 'sharp';
@@ -23,17 +23,21 @@ function fonts() {
   return fontsP;
 }
 
-/** The hero photo in its arch frame, as a PNG data URI. */
+/** The hero cut-out standing in its card, head above the card's top edge, as a PNG data URI. */
 let photoP: Promise<string> | null = null;
 function photo(w = 400, h = 500) {
   photoP ??= (async () => {
-    const r = w / 2;
-    const mask = Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"><path d="M0,${r} A${r},${r} 0 0 1 ${w},${r} L${w},${h - 16} Q${w},${h} ${w - 16},${h} L16,${h} Q0,${h} 0,${h - 16} Z" fill="#fff"/></svg>`);
-    const png = await sharp(join(root, 'public/hero.webp'))
-      .resize(w, h)
-      .composite([{ input: mask, blend: 'dest-in' }])
-      .png()
-      .toBuffer();
+    const top = Math.round(h * 0.26), r = 26;
+    const card = Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">
+      <defs><radialGradient id="g" cx="50%" cy="100%" r="80%"><stop offset="0" stop-color="${C.accent}" stop-opacity=".45"/><stop offset="1" stop-color="${C.accent}" stop-opacity="0"/></radialGradient></defs>
+      <rect x="0.5" y="${top}" width="${w - 1}" height="${h - top - 0.5}" rx="${r}" fill="#0D131F" stroke="${C.line}"/>
+      <rect x="0.5" y="${top}" width="${w - 1}" height="${h - top - 0.5}" rx="${r}" fill="url(#g)"/></svg>`);
+    const person = await sharp(join(root, 'public/hero.webp')).resize(w).png().toBuffer();
+    const pm = await sharp(person).metadata();
+    // round the person's bottom corners to match the card
+    const clip = Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${pm.height}"><path d="M0,0 H${w} V${pm.height! - r} Q${w},${pm.height} ${w - r},${pm.height} H${r} Q0,${pm.height} 0,${pm.height! - r} Z" fill="#fff"/></svg>`);
+    const clipped = await sharp(person).composite([{ input: clip, blend: 'dest-in' }]).png().toBuffer();
+    const png = await sharp(card).composite([{ input: clipped, left: 0, top: h - pm.height! }]).png().toBuffer();
     return `data:image/png;base64,${png.toString('base64')}`;
   })();
   return photoP;

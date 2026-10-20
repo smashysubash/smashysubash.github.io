@@ -35,7 +35,7 @@ const stops = [
   </nav>
 
   <main class="gutter relative z-[2]">
-    <section class="stop hero" id="intro" data-shape="halo">
+    <section class="stop hero" id="intro" data-shape="dots">
       <div class="panel">
         <span class="inline-flex items-center gap-2 font-mono text-[13px] text-ok"><i class="inline-block size-2 rounded-full bg-ok"></i>{profile.status} · {profile.location}</span>
         <h1 class="hero-title">{profile.name}<span>{profile.headline}</span></h1>
@@ -51,13 +51,14 @@ const stops = [
           <a class="no-underline hover:text-accent" href={profile.linkedin} target="_blank" rel="noopener" data-umami-event="outbound" data-umami-event-to="linkedin">LinkedIn ↗</a>
         </div>
       </div>
-      <figure class="hero-photo" data-lattice-anchor>
+      <figure class="hero-photo">
+        <div class="hero-card" aria-hidden="true"></div>
         <img
           src={url(heroPhoto.src)}
-          srcset={`${url(heroPhoto.srcSmall)} 440w, ${url(heroPhoto.src)} 880w`}
-          sizes="(max-width: 900px) 200px, 400px"
-          width="880"
-          height="1100"
+          srcset={`${url(heroPhoto.srcSmall)} 400w, ${url(heroPhoto.src)} 800w`}
+          sizes="(max-width: 900px) 220px, 420px"
+          width={heroPhoto.width}
+          height={heroPhoto.height}
           alt={heroPhoto.alt}
           fetchpriority="high"
         />
@@ -180,16 +181,24 @@ const stops = [
 </Base>
 
 <style>
-  /* Hero: text left, arch-framed duotone photo right; on phones the photo sits above the name. */
+  /* Hero: text left, photo right. The cut-out stands in a rounded card and its head rises
+     above the card's top edge; the body is clipped to the card's rounded bottom corners. */
   .hero { justify-content: space-between; gap: 48px; }
-  .hero-photo { margin: 0; flex: none; width: min(27vw, 360px); aspect-ratio: 4 / 5; border-radius: 999px 999px 20px 20px; overflow: hidden;
-    border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); box-shadow: 0 40px 90px -30px color-mix(in srgb, var(--accent) 45%, transparent); }
-  .hero-photo img { display: block; width: 100%; height: 100%; object-fit: cover; }
-  /* keep clear of the section index on the right edge */
+  .hero-photo { position: relative; margin: 0; flex: none; width: min(29vw, 420px); aspect-ratio: 800 / 915; }
+  .hero-card { position: absolute; inset: 26% 0 0 0; border-radius: 28px; border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--line));
+    background:
+      radial-gradient(90% 70% at 50% 100%, color-mix(in srgb, var(--accent) 38%, transparent), transparent 70%),
+      radial-gradient(60% 50% at 85% 10%, color-mix(in srgb, var(--warm) 14%, transparent), transparent 70%),
+      var(--panel-solid);
+    box-shadow: 0 40px 90px -40px color-mix(in srgb, var(--accent) 55%, transparent); }
+  .hero-photo img { position: absolute; left: 0; bottom: 0; width: 100%; height: auto; display: block;
+    clip-path: inset(-40% 0 0 0 round 0 0 28px 28px); filter: drop-shadow(0 18px 30px rgb(0 0 0 / .35)); }
   @media (min-width: 1101px) { .hero-photo { margin-right: 90px; } }
   @media (max-width: 900px) {
     .hero { flex-direction: column-reverse; align-items: flex-start; justify-content: center; gap: 28px; }
-    .hero-photo { width: 170px; }
+    .hero-photo { width: 220px; }
+    .hero-card { border-radius: 22px; }
+    .hero-photo img { clip-path: inset(-40% 0 0 0 round 0 0 22px 22px); }
   }
   .hero-title { font-size: clamp(48px, 8vw, 108px); line-height: .88; font-weight: 900; font-stretch: 122%; letter-spacing: -.035em; }
   .hero-title span { display: block; font-size: .42em; line-height: 1.05; font-weight: 700; font-stretch: 105%; letter-spacing: -.02em; margin-top: .4em; color: var(--accent); }

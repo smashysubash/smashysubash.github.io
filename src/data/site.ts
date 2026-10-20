@@ -143,5 +143,7 @@ export const tldr = {
 export const heroPhoto = {
   src: 'hero.webp',
   srcSmall: 'hero-sm.webp',
-  alt: 'Subash S., head and shoulders, by the sea at dusk',
+  alt: 'Subash S., head and shoulders',
+  width: 800,
+  height: 915,
 };
