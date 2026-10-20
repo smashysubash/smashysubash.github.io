@@ -29,7 +29,7 @@ for (const theme of ['dark', 'light'] as const) {
   page.on('pageerror', (e) => errors.push(`[${theme}] ${e.message}`));
   await page.goto(base + '/', { waitUntil: 'networkidle' });
   await page.waitForTimeout(2500);
-  for (const id of ['intro', 'impact', 'platform', 'ai', 'skills', 'contact']) {
+  for (const id of ['intro', 'impact', 'experience', 'platform', 'ai', 'skills', 'certs', 'writing', 'contact']) {
     await page.evaluate((id) => document.getElementById(id)?.scrollIntoView({ block: 'center', behavior: 'instant' as ScrollBehavior }), id);
     await page.waitForTimeout(6000);
     await page.screenshot({ path: `${out}/${theme}-${id}.png` });

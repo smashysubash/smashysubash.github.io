@@ -16,8 +16,8 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import * as S from './shapes';
 
-/** Stops where the shape faces the viewer instead of slowly spinning. */
-const FLAT = new Set(['portrait', 'badge', 'pages', 'tag']);
+/** Stops where the shape faces the viewer instead of slowly spinning: the avatar and the line-art icons. */
+const FLAT = new Set(['portrait', 'bill', 'career', 'tenants', 'chat']);
 
 const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 const clamp01 = (v: number) => Math.min(Math.max(v, 0), 1);
@@ -59,7 +59,7 @@ const vertex = /* glsl */ `
 
     // idle drift, so the cloud never looks frozen
     float ph = aRand * 6.2831;
-    p += uMotion * 0.05 * vec3(sin(uTime * 0.9 + ph), cos(uTime * 0.7 + ph), sin(uTime * 0.5 + ph * 1.3));
+    p += uMotion * 0.03 * vec3(sin(uTime * 0.9 + ph), cos(uTime * 0.7 + ph), sin(uTime * 0.5 + ph * 1.3));
 
     // scroll-velocity warp: fast scrolling bends the shape, it settles when you stop
     p.x += sin(p.y * 0.35 + uTime * 1.4) * uVelocity * 0.9;
@@ -110,14 +110,14 @@ const fragment = /* glsl */ `
 
 function shapeFor(el: HTMLElement, n: number, sphere: S.Shape): S.Shape {
   switch (el.dataset.shape) {
-    case 'fleet': return S.fleet(n);
-    case 'ladder': return S.ladder(n);
-    case 'tenants': return S.tenants(n);
-    case 'neural': return S.neural(n);
-    case 'clusters': return S.clusters(n, (el.dataset.sizes ?? '').split(',').map(Number).filter(Boolean));
-    case 'badge': return S.badge(n);
-    case 'pages': return S.pages(n);
-    case 'tag': return S.nfcTag(n);
+    case 'bill': return S.cloudBill(n);
+    case 'career': return S.careerGraph(n);
+    case 'tenants': return S.tenantDbs(n);
+    case 'chat': return S.chatSpark(n);
+    case 'orbits': return S.orbits(n, (el.dataset.sizes ?? '').split(',').map(Number).filter(Boolean));
+    case 'gyro': return S.gyroscope(n);
+    case 'ribbon': return S.ribbon(n);
+    case 'ripples': return S.ripples(n);
     default: return new Float32Array(sphere);
   }
 }
@@ -126,7 +126,8 @@ export function startLattice(canvas: HTMLCanvasElement) {
   const root = document.documentElement;
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const small = innerWidth < 900 || (navigator.hardwareConcurrency ?? 8) <= 4;
-  const N = reduce || small ? 8000 : 16000;
+  // fewer, larger, softer dots: calmer than a dense cloud
+  const N = reduce || small ? 4500 : 7000;
   const secs = [...document.querySelectorAll<HTMLElement>('[data-shape]')];
   const hud = document.getElementById('hud');
   if (!secs.length) return;
@@ -170,7 +171,7 @@ export function startLattice(canvas: HTMLCanvasElement) {
   geo.setAttribute('aRand', new BufferAttribute(rand, 1));
 
   const uniforms = {
-    uProgress: { value: 0 }, uTime: { value: 0 }, uSize: { value: 0.16 }, uPixelRatio: { value: dpr }, uScale: { value: innerHeight / 2 },
+    uProgress: { value: 0 }, uTime: { value: 0 }, uSize: { value: 0.26 }, uPixelRatio: { value: dpr }, uScale: { value: innerHeight / 2 },
     uMouse: { value: new Vector3(99, 99, 0) }, uMouseStrength: { value: 0 },
     uRipple: { value: new Vector3() }, uRippleTime: { value: -10 },
     uVelocity: { value: 0 }, uPortrait: { value: 0 }, uMotion: { value: reduce ? 0 : 1 },
@@ -190,7 +191,7 @@ export function startLattice(canvas: HTMLCanvasElement) {
   if (!small) {
     composer = new EffectComposer(renderer);
     composer.addPass(new RenderPass(scene, cam));
-    bloom = new UnrealBloomPass(new Vector2(innerWidth, innerHeight), 0.55, 0.45, 0.12);
+    bloom = new UnrealBloomPass(new Vector2(innerWidth, innerHeight), 0.28, 0.6, 0.2);
     composer.addPass(bloom);
     composer.addPass(new OutputPass());
   }
@@ -209,8 +210,8 @@ export function startLattice(canvas: HTMLCanvasElement) {
     uniforms.uColO.value.copy(css('--pt-o'));
     uniforms.uColW.value.copy(css('--pt-w'));
     uniforms.uDark.value = dark ? 1 : 0;
-    uniforms.uOpacity.value = dark ? 0.95 : 1;
-    uniforms.uSize.value = dark ? 0.16 : 0.2;
+    uniforms.uOpacity.value = dark ? 0.85 : 0.95;
+    uniforms.uSize.value = dark ? 0.26 : 0.28;
     mat.blending = dark ? AdditiveBlending : NormalBlending;
     mat.needsUpdate = true;
     if (bloom) bloom.enabled = dark;

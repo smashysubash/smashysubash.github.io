@@ -1,145 +1,241 @@
 /**
  * Point-cloud shapes for the lattice, one per home-page section.
- * Each builder returns a Float32Array of N xyz triples, roughly within a 20-unit box around the origin.
+ * Each builder returns a Float32Array of n xyz triples, roughly within a 20-unit box around the origin.
+ *
+ * Two families:
+ * - icons (Impact, Experience, Platform, AI): line art drawn as dotted outlines, like the hero avatar.
+ *   They face the viewer, so the lattice keeps them flat-on and only tilts them with the cursor.
+ * - abstract forms (Skills, Certs, Writing, Contact): calm 3D figures that slowly rotate.
  */
 
 export type Shape = Float32Array;
+type P = [number, number];
 
 const rnd = Math.random;
 const jit = (a: number) => (rnd() - 0.5) * a;
+const TAU = Math.PI * 2;
 
-function ball(r: number): [number, number, number] {
-  let x = jit(2), y = jit(2), z = jit(2);
-  const l = Math.hypot(x, y, z) || 1;
-  const k = (r * Math.cbrt(rnd())) / l;
-  return [x * k, y * k, z * k];
-}
+/* ---------- line-art helpers ---------- */
 
-function build(n: number, fn: (i: number) => [number, number, number]): Shape {
-  const o = new Float32Array(n * 3);
-  for (let i = 0; i < n; i++) o.set(fn(i), i * 3);
-  return o;
-}
-
-/** Point along the outline of a w×h rectangle centred on the origin. */
-function rectEdge(w: number, h: number): [number, number] {
-  const t = rnd() * 4;
-  if (t < 1) return [-w / 2 + w * t, -h / 2];
-  if (t < 2) return [w / 2, -h / 2 + h * (t - 1)];
-  if (t < 3) return [w / 2 - w * (t - 2), h / 2];
-  return [-w / 2, h / 2 - h * (t - 3)];
-}
-
-/** Intro fallback until the portrait loads. */
-export function sphere(n: number): Shape {
-  const g = Math.PI * (3 - Math.sqrt(5));
-  return build(n, (i) => {
-    const y = 1 - (i / (n - 1)) * 2, r = Math.sqrt(1 - y * y), t = g * i;
-    return [Math.cos(t) * r * 8.5, y * 8.5, Math.sin(t) * r * 8.5];
+/** Points on a circle/ellipse arc, as a polyline. */
+function arc(cx: number, cy: number, rx: number, ry: number, a0 = 0, a1 = TAU, steps = 48): P[] {
+  return Array.from({ length: steps + 1 }, (_, i) => {
+    const a = a0 + ((a1 - a0) * i) / steps;
+    return [cx + Math.cos(a) * rx, cy + Math.sin(a) * ry];
   });
 }
-
-/** Impact: 12 server racks, the last 4 cut down (the 35%). */
-export function fleet(n: number): Shape {
-  return build(n, (i) => {
-    const k = i % 12, cx = ((k % 4) - 1.5) * 4.2, cz = (Math.floor(k / 4) - 1) * 4.2, h = k > 7 ? 3.8 : 6.8;
-    return [cx + jit(2.6), -4.5 + rnd() * h, cz + jit(2.6)];
-  });
-}
-
-/** Experience: three rising steps, intern to SE. */
-export function ladder(n: number): Shape {
-  return build(n, (i) => {
-    const k = i % 3;
-    if (rnd() < 0.9) return [(k - 1) * 6.5 + jit(5), (k - 1) * 4.2 + jit(0.9), jit(4.5)];
-    const t = rnd();
-    return [-6.5 + 13 * t + jit(0.2), -4.2 + 8.4 * t + 1.2 + jit(0.2), jit(0.2)];
-  });
-}
-
-/** Platform: one core service, six tenant databases, links between. */
-export function tenants(n: number): Shape {
-  const nodes: [number, number, number][] = [];
-  for (let k = 0; k < 6; k++) { const a = (k / 6) * Math.PI * 2; nodes.push([Math.cos(a) * 8, Math.sin(a) * 5, Math.sin(a * 2) * 3]); }
-  return build(n, (i) => {
-    const q = rnd(), node = nodes[i % 6];
-    if (q < 0.3) return ball(2.7);
-    if (q < 0.62) { const w = ball(1.3); return [node[0] + w[0], node[1] + w[1], node[2] + w[2]]; }
-    const t = rnd();
-    return [node[0] * t + jit(0.25), node[1] * t + jit(0.25), node[2] * t + jit(0.25)];
-  });
-}
-
-/** AI: three layers of nodes with links between neighbours. */
-export function neural(n: number): Shape {
-  const L: [number, number, number, number][] = [];
-  for (let l = 0; l < 3; l++) for (let a = 0; a < 5; a++) for (let b = 0; b < 5; b++) L.push([(l - 1) * 7, (a - 2) * 2.2, (b - 2) * 2.2, l]);
-  return build(n, (i) => {
-    if (rnd() < 0.4) { const p = L[i % 75]; return [p[0] + jit(0.5), p[1] + jit(0.5), p[2] + jit(0.5)]; }
-    const A = L[Math.floor(rnd() * 50)], B = L[(A[3] + 1) * 25 + Math.floor(rnd() * 25)], t = rnd();
-    return [A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t, A[2] + (B[2] - A[2]) * t];
-  });
-}
-
-/** Skills: one cluster per skill group, sized by how many skills it holds. */
-export function clusters(n: number, sizes: number[]): Shape {
-  const total = sizes.reduce((a, b) => a + b, 0) || 1;
-  const centres = sizes.map((s, k) => {
-    const a = (k / sizes.length) * Math.PI * 2 - Math.PI / 2;
-    return { c: [Math.cos(a) * 7.5, Math.sin(a) * 6.2, 0], r: 0.9 + Math.sqrt(s) * 0.6 };
-  });
-  return build(n, (i) => {
-    const u = i % total; let k = 0, acc = 0;
-    for (; k < sizes.length - 1; k++) { acc += sizes[k]; if (u < acc) break; }
-    const g = centres[k], v = ball(g.r);
-    return [g.c[0] + v[0], g.c[1] + v[1], g.c[2] + v[2]];
-  });
-}
-
-/** Certifications: hexagon badge with ribbon tails. */
-export function badge(n: number): Shape {
-  return build(n, () => {
-    const q = rnd();
-    if (q < 0.45) {
-      const s = Math.floor(rnd() * 6), t = rnd();
-      const a0 = (s / 6) * Math.PI * 2 + Math.PI / 6, a1 = ((s + 1) / 6) * Math.PI * 2 + Math.PI / 6;
-      return [6.5 * (Math.cos(a0) + (Math.cos(a1) - Math.cos(a0)) * t) + jit(0.15), 1.5 + 6.5 * (Math.sin(a0) + (Math.sin(a1) - Math.sin(a0)) * t) + jit(0.15), jit(0.4)];
-    }
-    if (q < 0.75) { const a = rnd() * Math.PI * 2, r = 4 + jit(0.2); return [Math.cos(a) * r, 1.5 + Math.sin(a) * r, jit(0.3)]; }
-    const side = rnd() < 0.5 ? -1 : 1, t = rnd();
-    return [side * (1.5 + t * 2) + jit(0.6), -4.5 - t * 5, jit(0.3)];
-  });
-}
-
-/** Writing: three stacked sheets with lines of text. */
-export function pages(n: number): Shape {
-  return build(n, (i) => {
-    const k = i % 3, ox = (k - 1) * 1.6, oy = (1 - k) * 1.2, oz = (k - 1) * 2.2;
-    let x: number, y: number;
-    if (rnd() < 0.35) [x, y] = rectEdge(8, 11);
-    else { const ln = Math.floor(rnd() * 7); x = -3 + rnd() * (ln % 3 === 2 ? 4 : 6); y = 4 - ln * 1.35; }
-    return [x + ox + jit(0.1), y + oy + jit(0.1), oz + jit(0.15)];
-  });
-}
-
-/** Contact: an NFC tag with its wave mark and a tick. */
-export function nfcTag(n: number): Shape {
-  return build(n, (i) => {
-    const q = rnd();
-    let x: number, y: number;
-    if (q < 0.4) [x, y] = rectEdge(13, 9);
-    else if (q < 0.9) { const r = [1.4, 2.6, 3.8][i % 3], a = (rnd() - 0.5) * Math.PI * 0.6; x = -3 + Math.cos(a) * r; y = Math.sin(a) * r; }
-    else {
-      const t = rnd();
-      if (t < 0.35) { x = 2 + (t / 0.35) * 1.2; y = -0.5 - (t / 0.35) * 1.2; }
-      else { const k = (t - 0.35) / 0.65; x = 3.2 + k * 2.6; y = -1.7 + k * 3.2; }
-    }
-    return [x + jit(0.12), y + jit(0.12), jit(0.3)];
-  });
+/** Rounded rectangle outline, centred. */
+function roundRect(cx: number, cy: number, w: number, h: number, r: number): P[] {
+  const x0 = cx - w / 2, x1 = cx + w / 2, y0 = cy - h / 2, y1 = cy + h / 2;
+  return [
+    ...arc(x1 - r, y1 - r, r, r, 0, Math.PI / 2, 8),
+    ...arc(x0 + r, y1 - r, r, r, Math.PI / 2, Math.PI, 8),
+    ...arc(x0 + r, y0 + r, r, r, Math.PI, Math.PI * 1.5, 8),
+    ...arc(x1 - r, y0 + r, r, r, Math.PI * 1.5, TAU, 8),
+    [x1, y1 - r],
+  ];
 }
 
 /**
- * Portrait point cloud precomputed by tools/portrait.ts: Int16 quads (x, y, z, shade),
+ * Turn polylines into points spread evenly by length (the outline), plus an optional light
+ * fill inside closed polygons. Points sit on two layers (z = ±depth) so icons have a little
+ * thickness when they tilt.
+ */
+function lineArt(n: number, strokes: P[][], fills: P[][] = [], { fillShare = 0.12, depth = 0.5, scale = 1 } = {}): Shape {
+  const segs: { a: P; b: P; len: number }[] = [];
+  let total = 0;
+  for (const s of strokes) for (let i = 1; i < s.length; i++) {
+    const len = Math.hypot(s[i][0] - s[i - 1][0], s[i][1] - s[i - 1][1]);
+    if (len > 0) { segs.push({ a: s[i - 1], b: s[i], len }); total += len; }
+  }
+  const out = new Float32Array(n * 3);
+  const nFill = fills.length ? Math.round(n * fillShare) : 0;
+  for (let i = 0; i < n - nFill; i++) {
+    let d = rnd() * total, k = 0;
+    while (k < segs.length - 1 && d > segs[k].len) d -= segs[k++].len;
+    const { a, b, len } = segs[k], t = d / len;
+    const layer = rnd() < 0.5 ? -depth : depth;
+    out.set([(a[0] + (b[0] - a[0]) * t + jit(0.12)) * scale, (a[1] + (b[1] - a[1]) * t + jit(0.12)) * scale, layer + jit(0.15)], i * 3);
+  }
+  /* fill: rejection-sample inside the polygons' bounding box */
+  const inside = (x: number, y: number, poly: P[]) => {
+    let c = false;
+    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+      const [xi, yi] = poly[i], [xj, yj] = poly[j];
+      if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) c = !c;
+    }
+    return c;
+  };
+  for (let i = n - nFill; i < n; ) {
+    const poly = fills[Math.floor(rnd() * fills.length)];
+    const xs = poly.map((p) => p[0]), ys = poly.map((p) => p[1]);
+    const x = Math.min(...xs) + rnd() * (Math.max(...xs) - Math.min(...xs)), y = Math.min(...ys) + rnd() * (Math.max(...ys) - Math.min(...ys));
+    if (!inside(x, y, poly)) continue;
+    out.set([x * scale, y * scale, jit(depth * 2)], i * 3);
+    i++;
+  }
+  return out;
+}
+
+/* ---------- intro fallback ---------- */
+
+/** Shown until the avatar points arrive. */
+export function sphere(n: number): Shape {
+  const g = Math.PI * (3 - Math.sqrt(5)), o = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) {
+    const y = 1 - (i / (n - 1)) * 2, r = Math.sqrt(1 - y * y), t = g * i;
+    o.set([Math.cos(t) * r * 8.5, y * 8.5, Math.sin(t) * r * 8.5], i * 3);
+  }
+  return o;
+}
+
+/* ---------- icons ---------- */
+
+/** Impact: a cloud over three shrinking bars and a downward arrow, the cloud bill coming down. */
+export function cloudBill(n: number): Shape {
+  // three puffs over a flat base, traced as one outline (y is up)
+  const cloud: P[] = [
+    ...arc(-4.4, 3.8, 2.2, 2.2, Math.PI * 1.5, Math.PI * 0.35, 22),
+    ...arc(-0.4, 5.1, 3.0, 3.0, Math.PI * 0.9, Math.PI * 0.12, 26),
+    ...arc(3.9, 3.9, 2.3, 2.3, Math.PI * 0.62, -Math.PI * 0.5, 24),
+    [-4.4, 1.6],
+  ];
+  const bars = [[-5.5, 3.6], [-1.5, 2.6], [2.5, 1.6]].map(([x, h], i) => {
+    const top = -0.6 - (3 - h) - i * 0.9, w = 2.6;
+    return [[x, -8.5], [x, top], [x + w, top], [x + w, -8.5]] as P[];
+  });
+  const axis: P[] = [[-7, -8.5], [7.5, -8.5]];
+  const arrow: P[][] = [[[5.6, -1.2], [7.4, -6.2]], [[6.1, -5.6], [7.4, -6.2], [7.9, -4.8]]];
+  return lineArt(n, [cloud, ...bars, axis, ...arrow], bars, { fillShare: 0.14 });
+}
+
+/** Experience: a git graph. Three commits climb Intern → Associate → SE; a branch merges back in. */
+export function careerGraph(n: number): Shape {
+  const nodes: P[] = [[-6, -6], [0, 0], [6, 6]];
+  const main: P[] = [[-8.5, -8.5], [-6, -6], [0, 0], [6, 6], [8.5, 8.5]];
+  const branch: P[] = [[-6, -6], [-6.8, -2.4], [-4.8, 1.6], [0, 0]];
+  const branch2: P[] = [[0, 0], [1.6, 4.8], [4.4, 6.8], [6, 6]];
+  const rings = nodes.map(([x, y], i) => arc(x, y, 1.1 + i * 0.25, 1.1 + i * 0.25, 0, TAU, 28));
+  const inner = nodes.map(([x, y], i) => arc(x, y, 0.45 + i * 0.1, 0.45 + i * 0.1, 0, TAU, 14));
+  const side = [arc(-6.8, -2.4, 0.55, 0.55, 0, TAU, 14), arc(1.6, 4.8, 0.55, 0.55, 0, TAU, 14)];
+  return lineArt(n, [main, branch, branch2, ...rings, ...inner, ...side], rings, { fillShare: 0.08 });
+}
+
+/** Platform: one service in the middle, wired to six tenant databases. */
+export function tenantDbs(n: number): Shape {
+  const hub = roundRect(0, 0, 5.2, 3.6, 0.8);
+  const hubLines: P[][] = [[[-1.6, 0.6], [1.6, 0.6]], [[-1.6, -0.6], [1.6, -0.6]]];
+  const strokes: P[][] = [hub, ...hubLines];
+  const fills: P[][] = [hub];
+  for (let k = 0; k < 6; k++) {
+    const a = (k / 6) * TAU + Math.PI / 6, cx = Math.cos(a) * 8, cy = Math.sin(a) * 6.2;
+    const rx = 1.5, ry = 0.5, h = 2.4, top = cy + h / 2, bot = cy - h / 2;
+    strokes.push(
+      arc(cx, top, rx, ry, 0, TAU, 28),
+      arc(cx, bot, rx, ry, Math.PI, TAU, 16),
+      [[cx - rx, top], [cx - rx, bot]],
+      [[cx + rx, top], [cx + rx, bot]],
+      arc(cx, cy, rx, ry, Math.PI, TAU, 16),
+      // wire from the hub edge to the database
+      [[Math.cos(a) * 3.1, Math.sin(a) * 2.2], [cx - Math.cos(a) * 1.9, cy - Math.sin(a) * 1.7]],
+    );
+  }
+  return lineArt(n, strokes, fills, { fillShare: 0.06 });
+}
+
+/** AI: a chat bubble with a four-point spark and a typing indicator. */
+export function chatSpark(n: number): Shape {
+  const bubble: P[] = [...roundRect(0, 1, 15, 10.5, 2.4).slice(0, -1)];
+  // tail at the bottom-left
+  const tail: P[] = [[-4.2, -4.25], [-6, -7.6], [-1.6, -4.25]];
+  // four-point sparkle with curved sides (an astroid)
+  const spark = (cx: number, cy: number, r: number): P[] =>
+    Array.from({ length: 73 }, (_, i) => {
+      const t = (i / 72) * TAU;
+      return [cx + r * Math.cos(t) ** 3, cy + r * Math.sin(t) ** 3] as P;
+    });
+  const big = spark(-1.2, 2.2, 3.4), small = spark(3.6, 4.6, 1.5);
+  const dots = [-1.6, 0.6, 2.8].map((x) => arc(x + 1.3, -1.9, 0.38, 0.38, 0, TAU, 10));
+  return lineArt(n, [bubble, tail, big, small, ...dots], [big, small], { fillShare: 0.12 });
+}
+
+/* ---------- abstract forms ---------- */
+
+/** Skills: three tilted orbits, one node per skill group sized by how many skills it holds. */
+export function orbits(n: number, sizes: number[]): Shape {
+  const o = new Float32Array(n * 3);
+  const tilts = [[0.25, 0], [-0.35, 0.5], [0.55, -0.45]];
+  const R = [8.2, 7.2, 6.2];
+  const total = sizes.reduce((a, b) => a + b, 0) || 1;
+  const nodes = sizes.map((s, k) => ({ ring: k % 3, a: (k / sizes.length) * TAU * 1.7, r: 0.45 + Math.sqrt(s / total) * 2.4 }));
+  const place = (ring: number, a: number, off: [number, number, number] = [0, 0, 0]) => {
+    let x = Math.cos(a) * R[ring] + off[0], y = Math.sin(a) * R[ring] * 0.6 + off[1], z = off[2];
+    const [tx, tz] = tilts[ring];
+    [y, z] = [y * Math.cos(tx) - z * Math.sin(tx), y * Math.sin(tx) + z * Math.cos(tx)];
+    [x, y] = [x * Math.cos(tz) - y * Math.sin(tz), x * Math.sin(tz) + y * Math.cos(tz)];
+    return [x, y, z];
+  };
+  for (let i = 0; i < n; i++) {
+    if (rnd() < 0.55) {
+      const ring = i % 3;
+      o.set(place(ring, rnd() * TAU, [jit(0.1), jit(0.1), jit(0.1)]), i * 3);
+    } else if (rnd() < 0.92) {
+      const nd = nodes[i % nodes.length], u = rnd() * TAU, v = Math.acos(2 * rnd() - 1), r = nd.r * Math.cbrt(rnd());
+      o.set(place(nd.ring, nd.a, [r * Math.sin(v) * Math.cos(u), r * Math.sin(v) * Math.sin(u), r * Math.cos(v)]), i * 3);
+    } else {
+      const u = rnd() * TAU, v = Math.acos(2 * rnd() - 1), r = 1.2 * Math.cbrt(rnd());
+      o.set([r * Math.sin(v) * Math.cos(u), r * Math.sin(v) * Math.sin(u), r * Math.cos(v)], i * 3);
+    }
+  }
+  return o;
+}
+
+/** Certifications: nested rings at different angles, like a gyroscope. */
+export function gyroscope(n: number): Shape {
+  const o = new Float32Array(n * 3);
+  const rings = [
+    { r: 8, rx: 0, ry: 0 },
+    { r: 6.6, rx: Math.PI / 2, ry: 0.4 },
+    { r: 5.2, rx: 0.9, ry: Math.PI / 2 },
+    { r: 3.8, rx: -0.6, ry: -0.9 },
+  ];
+  for (let i = 0; i < n; i++) {
+    const ring = rings[i % rings.length], a = rnd() * TAU;
+    let x = Math.cos(a) * ring.r + jit(0.15), y = Math.sin(a) * ring.r + jit(0.15), z = jit(0.3);
+    [y, z] = [y * Math.cos(ring.rx) - z * Math.sin(ring.rx), y * Math.sin(ring.rx) + z * Math.cos(ring.rx)];
+    [x, z] = [x * Math.cos(ring.ry) + z * Math.sin(ring.ry), -x * Math.sin(ring.ry) + z * Math.cos(ring.ry)];
+    o.set([x, y, z], i * 3);
+  }
+  return o;
+}
+
+/** Writing: a flowing ribbon of wave lines, like lines of text in motion. */
+export function ribbon(n: number): Shape {
+  const o = new Float32Array(n * 3), lines = 9;
+  for (let i = 0; i < n; i++) {
+    const l = i % lines, u = rnd() * 2 - 1;
+    const x = u * 10, base = (l - (lines - 1) / 2) * 1.2;
+    const y = base + Math.sin(u * 3 + l * 0.35) * 2.2 * (1 - Math.abs(u) * 0.3);
+    const z = Math.cos(u * 2.4 + l * 0.5) * 3.2;
+    o.set([x + jit(0.08), y + jit(0.08), z + jit(0.12)], i * 3);
+  }
+  return o;
+}
+
+/** Contact: signal ripples spreading from one point. */
+export function ripples(n: number): Shape {
+  const o = new Float32Array(n * 3), rings = 7;
+  for (let i = 0; i < n; i++) {
+    const k = i % rings, r = 1.2 + k * 1.25, a = rnd() * TAU;
+    // rings sit on a gentle dome, so it reads as a wave rather than a target
+    const z = Math.cos((r / 10) * Math.PI) * 2.4 - k * 0.15;
+    o.set([Math.cos(a) * r + jit(0.1), Math.sin(a) * r * 0.62 + jit(0.1), z + jit(0.12)], i * 3);
+  }
+  return o;
+}
+
+/**
+ * Avatar point cloud precomputed by tools/avatar.ts: Int16 quads (x, y, z, shade),
  * positions × 1000, shade × 32767, shuffled so the first n points are an even sample.
  * Resolves to null if the file is missing or too small.
  */
